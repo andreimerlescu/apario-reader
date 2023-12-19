@@ -188,6 +188,10 @@ the English Gematria value of 1602 can also represent:
 | 1602  | The Search For Lost Friends        |
 | 1602  | A Turning Point For America        | 
 | 1602  | I Am Q Without Dispute Q           |
+| 1602  | Jesus Christ Prince Of Peace       |
+
+Ironically enough, the last entry `Jesus Christ Prince Of Peace` is also 1602 in Jewish 
+gematria as well as English gematria. Is that a coincidence? 
 
 As you can see, the possibilities for finding something else that may or may not be
 considered interesting TO YOU, may come out of simple Gematria related searches. 
