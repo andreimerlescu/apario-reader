@@ -1,0 +1,6 @@
+.idea
+.DS_Store
+._*
+bundled/geography/locations.csv
+database/*
+!database/.keep
