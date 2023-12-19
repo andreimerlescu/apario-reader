@@ -40,9 +40,10 @@ func main() {
 		}
 	}
 
-	configErr := config.Parse(filepath.Join(".", "config.yaml"))
+	// Attempt to read from the `--config` as a file, default: config.yaml
+	configErr := config.Parse(*flag_s_config_file)
 	if configErr != nil {
-		log.Fatalf("failed to parse config.yaml due to err: %v", configErr)
+		log.Fatalf("failed to parse config file: %v", configErr)
 	}
 
 	if *flag_s_database == "" {
@@ -86,6 +87,9 @@ func main() {
 
 		ch_db_directories.Close()
 
+		close(ch_cert_reloader_cancel)
+		close(ch_webserver_done)
+
 		fmt.Printf("Completed running in %d", time.Since(startedAt))
 
 		var cmd *exec.Cmd
@@ -111,14 +115,7 @@ func main() {
 		os.Exit(0)
 	}()
 
-	bundled_load_all_words()
-
-	log.Printf("m_words_english_gematria_simple = %T len() = %d", m_words_english_gematria_simple, len(m_words_english_gematria_simple))
-	log.Printf("m_words_english_gematria_jewish = %T len() = %d", m_words_english_gematria_jewish, len(m_words_english_gematria_jewish))
-	log.Printf("m_words_english_gematria_english = %T len() = %d", m_words_english_gematria_english, len(m_words_english_gematria_english))
-	log.Printf("m_gematria_simple = %T len() = %d", m_gematria_simple, len(m_gematria_simple))
-	log.Printf("m_gematria_english = %T len() = %d", m_gematria_english, len(m_gematria_english))
-	log.Printf("m_gematria_jewish = %T len() = %d", m_gematria_jewish, len(m_gematria_jewish))
+	//bundled_load_all_words()
 	slog.Info("Break here")
 
 	go process_directories(ch_db_directories.Chan())
@@ -145,6 +142,17 @@ func main() {
 		return
 	}
 	wg_active_tasks.Wait()
+
 	slog.Info("done loading the application's database into memory")
 
+	go NewWebServer(ctx, ch_webserver_done)
+
+	for {
+		select {
+		case <-ctx.Done():
+			fatalf_stout("Main context canceled, exiting application now. Reason: %v", ctx.Err())
+		case <-ch_webserver_done:
+			cancel()
+		}
+	}
 }

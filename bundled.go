@@ -9,7 +9,6 @@ import (
 	`fmt`
 	`io/fs`
 	`log`
-	`log/slog`
 	`os`
 	`os/exec`
 	`strconv`
@@ -21,15 +20,15 @@ import (
 //go:embed bundled/*
 var bundled_files embed.FS
 
-func bundled_load_all_words() {
-	languages := []string{"english", "french", "german", "romanian", "russian", "spanish"}
-	for _, language := range languages {
-		err := bundled_load_language(language)
-		if err != nil {
-			slog.Error("received an error loading %v: %v", language, err)
-		}
-	}
-}
+//func bundled_load_all_words() {
+//	languages := []string{"english", "french", "german", "romanian", "russian", "spanish"}
+//	for _, language := range languages {
+//		err := bundled_load_language(language)
+//		if err != nil {
+//			slog.Error("received an error loading %v: %v", language, err)
+//		}
+//	}
+//}
 
 func bundled_load_cryptonyms() {
 	wg_active_tasks.Add(1)
@@ -98,60 +97,60 @@ func bundled_load_locations(ctx context.Context, callback CallbackFunc) error {
 	return nil
 }
 
-func bundled_load_language(language string) error {
-	filename := fmt.Sprintf("bundled/dictionaries/words-%s.txt", language)
-	wordsFile, fileErr := bundled_files.Open(filename)
-	if fileErr != nil {
-		return fmt.Errorf("failed to load dictionary %v due to error %v", language, fileErr)
-	}
-	defer func(wordsFile fs.File) {
-		err := wordsFile.Close()
-		if err != nil {
-			slog.Error("failed to close the wordsFile handler with %v", err)
-		}
-	}(wordsFile)
-
-	scanner := bufio.NewScanner(wordsFile)
-	for scanner.Scan() {
-		word := scanner.Text()
-		_, language_found := m_words[language]
-		if !language_found {
-			m_words[language] = make(map[string]struct{})
-		}
-		m_words[language][word] = struct{}{}
-		if language != "english" {
-			continue
-		}
-		gematria := NewGemScore(word)
-		// english
-		_, englished_declared := m_gematria_english[gematria.English]
-		if !englished_declared {
-			m_gematria_english[gematria.English] = make(map[string]struct{})
-		}
-		m_gematria_english[gematria.English][word] = struct{}{}
-		m_words_english_gematria_english[word] = gematria.English
-		// jewish
-		_, jewish_declared := m_gematria_jewish[gematria.Jewish]
-		if !jewish_declared {
-			m_gematria_jewish[gematria.Jewish] = make(map[string]struct{})
-		}
-		m_gematria_jewish[gematria.Jewish][word] = struct{}{}
-		m_words_english_gematria_jewish[word] = gematria.Jewish
-		// simple
-		_, simple_declared := m_gematria_simple[gematria.Simple]
-		if !simple_declared {
-			m_gematria_simple[gematria.Simple] = make(map[string]struct{})
-		}
-		m_gematria_simple[gematria.Simple][word] = struct{}{}
-		m_words_english_gematria_simple[word] = gematria.Simple
-	}
-
-	if err := scanner.Err(); err != nil {
-		return fmt.Errorf("error reading file %v: %w", filename, err)
-	}
-
-	return nil
-}
+//func bundled_load_language(language string) error {
+//	filename := fmt.Sprintf("bundled/dictionaries/words-%s.txt", language)
+//	wordsFile, fileErr := bundled_files.Open(filename)
+//	if fileErr != nil {
+//		return fmt.Errorf("failed to load dictionary %v due to error %v", language, fileErr)
+//	}
+//	defer func(wordsFile fs.File) {
+//		err := wordsFile.Close()
+//		if err != nil {
+//			slog.Error("failed to close the wordsFile handler with %v", err)
+//		}
+//	}(wordsFile)
+//
+//	scanner := bufio.NewScanner(wordsFile)
+//	for scanner.Scan() {
+//		word := scanner.Text()
+//		_, language_found := m_words[language]
+//		if !language_found {
+//			m_words[language] = make(map[string]struct{})
+//		}
+//		m_words[language][word] = struct{}{}
+//		if language != "english" {
+//			continue
+//		}
+//		gematria := NewGemScore(word)
+//		// english
+//		_, englished_declared := m_gematria_english[gematria.English]
+//		if !englished_declared {
+//			m_gematria_english[gematria.English] = make(map[string]struct{})
+//		}
+//		m_gematria_english[gematria.English][word] = struct{}{}
+//		m_words_english_gematria_english[word] = gematria.English
+//		// jewish
+//		_, jewish_declared := m_gematria_jewish[gematria.Jewish]
+//		if !jewish_declared {
+//			m_gematria_jewish[gematria.Jewish] = make(map[string]struct{})
+//		}
+//		m_gematria_jewish[gematria.Jewish][word] = struct{}{}
+//		m_words_english_gematria_jewish[word] = gematria.Jewish
+//		// simple
+//		_, simple_declared := m_gematria_simple[gematria.Simple]
+//		if !simple_declared {
+//			m_gematria_simple[gematria.Simple] = make(map[string]struct{})
+//		}
+//		m_gematria_simple[gematria.Simple][word] = struct{}{}
+//		m_words_english_gematria_simple[word] = gematria.Simple
+//	}
+//
+//	if err := scanner.Err(); err != nil {
+//		return fmt.Errorf("error reading file %v: %w", filename, err)
+//	}
+//
+//	return nil
+//}
 
 func parsePIDs(output string) []int {
 	var pids []int

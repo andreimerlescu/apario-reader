@@ -44,7 +44,7 @@ func processLocation(ctx context.Context, row []Column) error {
 		log.Fatalf("failed to convert float: %v", floatConversionErr)
 	}
 
-	location := &Location{
+	location := Location{
 		Continent:   continent,
 		Country:     countryName,
 		CountryCode: countryCode,

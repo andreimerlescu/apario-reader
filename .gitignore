@@ -4,3 +4,5 @@
 bundled/geography/locations.csv
 database/*
 !database/.keep
+logs/*
+!logs/.keep

@@ -19,6 +19,7 @@ package main
 
 import (
 	`context`
+	`crypto/tls`
 	"fmt"
 	"image/color"
 	"path/filepath"
@@ -56,34 +57,34 @@ var (
 	// Strings
 
 	// Maps
-	m_cryptonyms                     = make(map[string]string)                       // map[Cryptonym]Definition
-	m_words                          = make(map[string]map[string]struct{})          // map[language]map[word]{}
-	m_words_english_gematria_english = make(map[string]uint)
-	m_words_english_gematria_jewish  = make(map[string]uint)
-	m_words_english_gematria_simple  = make(map[string]uint)
-	m_gematria_english               = make(map[uint]map[string]struct{})            // english words gematria english values
-	m_gematria_jewish                = make(map[uint]map[string]struct{})            // english words gematria jewish values
-	m_gematria_simple                = make(map[uint]map[string]struct{})            // english words gematria simple values
-	m_collections                    = make(map[string]Collection)
-	mu_collections                   = sync.RWMutex{}
-	m_collection_documents           = make(map[string]map[string]Document)          // map[CollectionName][DocumentIdentifier]Document{}
-	mu_collection_documents          = sync.RWMutex{}
-	m_document_pages                 = make(map[string]map[uint]Page)                // map[DocumentIdentifier][PageNumber]Page{}
-	mu_document_pages                = sync.RWMutex{}
-	m_page_words                     = make(map[string]map[string]struct{})          // map[PageIdentifier]map[word]struct{}
-	mu_page_words                    = sync.RWMutex{}
-	m_page_gematria_english          = make(map[uint]map[string]map[string]struct{}) // map[GemScore.English]map[PageIdentifier]map[word]struct{}
-	mu_page_gematria_english         = sync.RWMutex{}
-	m_page_gematria_jewish           = make(map[uint]map[string]map[string]struct{}) // map[GemScore.Jewish]map[PageIdentifier]map[word]struct{}
-	mu_page_gematria_jewish          = sync.RWMutex{}
-	m_page_gematria_simple           = make(map[uint]map[string]map[string]struct{}) // map[GemScore.Simple]map[PageIdentifier]map[word]struct{}
-	mu_page_gematria_simple          = sync.RWMutex{}
+	m_cryptonyms = make(map[string]string) // map[Cryptonym]Definition
+	//m_words                          = make(map[string]map[string]struct{})          // map[language]map[word]{}
+	//m_words_english_gematria_english = make(map[string]uint)
+	//m_words_english_gematria_jewish  = make(map[string]uint)
+	//m_words_english_gematria_simple  = make(map[string]uint)
+	//m_gematria_english               = make(map[uint]map[string]struct{})            // english words gematria english values
+	//m_gematria_jewish                = make(map[uint]map[string]struct{})            // english words gematria jewish values
+	//m_gematria_simple                = make(map[uint]map[string]struct{})            // english words gematria simple values
+	m_collections            = make(map[string]Collection)
+	mu_collections           = sync.RWMutex{}
+	m_collection_documents   = make(map[string]map[string]Document)          // map[CollectionName][DocumentIdentifier]Document{}
+	mu_collection_documents  = sync.RWMutex{}
+	m_document_pages         = make(map[string]map[uint]Page)                // map[DocumentIdentifier][PageNumber]Page{}
+	mu_document_pages        = sync.RWMutex{}
+	m_page_words             = make(map[string]map[string]struct{})          // map[PageIdentifier]map[word]struct{}
+	mu_page_words            = sync.RWMutex{}
+	m_page_gematria_english  = make(map[uint]map[string]map[string]struct{}) // map[GemScore.English]map[PageIdentifier]map[word]struct{}
+	mu_page_gematria_english = sync.RWMutex{}
+	m_page_gematria_jewish   = make(map[uint]map[string]map[string]struct{}) // map[GemScore.Jewish]map[PageIdentifier]map[word]struct{}
+	mu_page_gematria_jewish  = sync.RWMutex{}
+	m_page_gematria_simple   = make(map[uint]map[string]map[string]struct{}) // map[GemScore.Simple]map[PageIdentifier]map[word]struct{}
+	mu_page_gematria_simple  = sync.RWMutex{}
 
-	m_location_cities     []*Location
+	m_location_cities     []Location
 	mu_location_cities    = sync.RWMutex{}
-	m_location_countries  []*Location
+	m_location_countries  []Location
 	mu_location_countries = sync.RWMutex{}
-	m_location_states     []*Location
+	m_location_states     []Location
 	mu_location_states    = sync.RWMutex{}
 
 	// old maps
@@ -114,16 +115,61 @@ var (
 	re_date6 = regexp.MustCompile(`(\d{4})`)
 
 	// Synchronization
-	wg_active_tasks = cwg.CountableWaitGroup{}
+	wg_active_tasks   = cwg.CountableWaitGroup{}
+	mu_cert           = &sync.RWMutex{}
+	once_server_start = sync.Once{}
+
+	// TLS
+	cert tls.Certificate
+
+	// Channels
+	ch_cert_reloader_cancel = make(chan bool)
+	ch_webserver_done       = make(chan struct{})
 
 	// Command Line Flags
-	flag_s_database         = config.NewString("database", "", "apario-contribution rendered database directory path")
-	flag_i_sem_limiter      = config.NewInt("limit", channel_buffer_size, "general purpose semaphore limiter")
-	flag_i_sem_directories  = config.NewInt("directories-limiter", channel_buffer_size, "concurrent directories to process out of the database (example: 369)")
-	flag_i_sem_pages        = config.NewInt("pages-limiter", channel_buffer_size, "concurrent pages to process out of the database")
-	flag_i_directory_buffer = config.NewInt("directory-buffer", channel_buffer_size, "buffered channel size for pending directories from the database (3x --directories, example: 1107)")
-	flag_i_buffer           = config.NewInt("buffer", reader_buffer_bytes, "Memory allocation for CSV buffer (min 168 * 1024 = 168KB)")
-	flag_g_log_file         = config.NewString("log", filepath.Join(".", "logs", fmt.Sprintf("badbitchreads-%04d-%02d-%02d-%02d-%02d-%02d.log", startedAt.Year(), startedAt.Month(), startedAt.Day(), startedAt.Hour(), startedAt.Minute(), startedAt.Second())), "File to save logs to. Default is logs/engine-YYYY-MM-DD-HH-MM-SS.log")
+	flag_s_database                           = config.NewString("database", "", "apario-contribution rendered database directory path")
+	flag_i_sem_limiter                        = config.NewInt("limit", channel_buffer_size, "general purpose semaphore limiter")
+	flag_i_sem_directories                    = config.NewInt("directories-limiter", channel_buffer_size, "concurrent directories to process out of the database (example: 369)")
+	flag_i_sem_pages                          = config.NewInt("pages-limiter", channel_buffer_size, "concurrent pages to process out of the database")
+	flag_i_directory_buffer                   = config.NewInt("directory-buffer", channel_buffer_size, "buffered channel size for pending directories from the database (3x --directories, example: 1107)")
+	flag_i_buffer                             = config.NewInt("buffer", reader_buffer_bytes, "Memory allocation for CSV buffer (min 168 * 1024 = 168KB)")
+	flag_g_log_file                           = config.NewString("log", filepath.Join(".", "logs", fmt.Sprintf("badbitchreads-%04d-%02d-%02d-%02d-%02d-%02d.log", startedAt.Year(), startedAt.Month(), startedAt.Day(), startedAt.Hour(), startedAt.Minute(), startedAt.Second())), "File to save logs to. Default is logs/engine-YYYY-MM-DD-HH-MM-SS.log")
+	flag_b_enable_cors                        = config.NewBool("enable-cors", true, "Enable/Disable CORS")
+	flag_b_enable_csp                         = config.NewBool("enable-csp", true, "Enable/Disable CSP")
+	flag_s_cors_domains_csv                   = config.NewString("cors-domains-csv", "", "List of CORS domains in CSV format")
+	flag_s_csp_domains_csv                    = config.NewString("csp-domains-csv", "", "List of CSP domains in CSV format")
+	flag_s_csp_thirdparty_csv                 = config.NewString("csp-thirdparty-csv", "", "List of third party domains in CSV format")
+	flag_s_csp_thirdparty_styles_csv          = config.NewString("csp-thirdparty-styles-csv", "", "List of third party domains in CSV format")
+	flag_s_csp_websocket_domains_csv          = config.NewString("csp-ws-domains-csv", "", "List of Web Socket domains in CSV format")
+	flag_b_csp_script_enable_unsafe_inline    = config.NewBool("csp-script-unsafe-inline", true, "Enable/Disable Unsafe Inline script execution via CSP")
+	flag_b_csp_script_enable_unsafe_eval      = config.NewBool("csp-script-unsafe-eval", false, "Enable/Disable Unsafe Eval script execution via CSP")
+	flag_b_csp_child_src_enable_unsafe_inline = config.NewBool("csp-child-unsafe-inline", true, "Enable/Disable Child SRC Unsafe Inline script execution via CSP")
+	flag_b_csp_style_src_enable_unsafe_inline = config.NewBool("csp-style-unsafe-inline", true, "Enable/Disable Style SRC Unsafe Inline script execution via CSP")
+	flag_b_csp_upgrade_unsecure_requests      = config.NewBool("csp-upgrade-insecure", true, "Enable/Disable automagically upgrading HTTP to HTTPS for requests via CSP")
+	flag_b_csp_block_mixed_content            = config.NewBool("csp-block-mixed-content", true, "Enable/Disable automatically blocking mixed HTTP and HTTPS content for requests via CSP")
+	flag_s_csp_report_uri                     = config.NewString("csp-report-uri", "/security/csp-report", "Path for content security policy violation reports to get logged")
+	flag_s_config_file                        = config.NewString("config", filepath.Join(".", "config.yaml"), "Configuration file")
+	flag_s_log_file                           = config.NewString("error-log", filepath.Join(".", "logs", "go.log"), "File to write logs.")
+	flag_s_gin_log_file                       = config.NewString("access-log", filepath.Join(".", "logs", "gin.log"), "Default log file for GIN access logs.")
+	flag_i_webserver_default_port             = config.NewInt("unsecure-port", 8080, "Port to start non-SSL version of application.")
+	flag_i_webserver_secure_port              = config.NewInt("secure-port", 8443, "Port to start the SSL version of the application.")
+	flag_s_ssl_public_key                     = config.NewString("tls-public-key", "", "Path to the SSL certificate's public key. It expects any CA chain certificates to be concatenated at the end of this PEM formatted file.")
+	flag_s_ssl_private_key                    = config.NewString("tls-private-key", "", "Path to the PEM formatted SSL certificate's private key.")
+	flag_s_ssl_private_key_password           = config.NewString("tls-private-key-password", "", "If the PEM private key is encrypted with a password, provide it here.")
+	flag_b_auto_ssl                           = config.NewBool("auto-tls", false, "Create a self-signed certificate on the fly and use it for serving the application over SSL.")
+	flag_i_reload_cert_every_minutes          = config.NewInt("tls-life-min", 72, "Lifespan of the auto generated self signed TLS certificate in minutes.")
+	flag_i_auto_ssl_default_expires           = config.NewInt("tls-expires-in", 365*24, "Auto generated TLS/SSL certificates will automatically expire in hours.")
+	flag_s_auto_ssl_company                   = config.NewString("tls-company", "ACME Inc.", "Auto generated TLS/SSL certificates are configured with the company name.")
+	flag_s_auto_ssl_domain_name               = config.NewString("tls-domain-name", "", "Auto generated TLS/SSL certificates will have this common name and run on this domain name.")
+	flag_s_auto_ssl_san_ip                    = config.NewString("tls-san-ip", "", "Auto generated TLS/SSL certificates will have this SAN IP address attached to it in addition to its common name.")
+	flag_s_auto_ssl_additional_domains        = config.NewString("tls-additional-domains", "", "Auto generated TLS/SSL certificates will be issued with these additional domains (CSV formatted).")
+	flag_f_rate_limit                         = config.NewFloat64("rate-limit", 12.0, "Requests per second (0.5 = 1 request every 2 seconds).")
+	flag_i_rate_limit_cleanup_delay           = config.NewInt("rate-limit-cleanup", 3, "Seconds between rate limit cleanups.")
+	flag_i_rate_limit_entry_ttl               = config.NewInt("rate-limit-ttl", 3, "Seconds a rate limit entry exists for before cleanup is triggered.")
+	flag_f_asset_rate_limit                   = config.NewFloat64("rate-limit-asset", 36.0, "Requests per second (0.5 = 1 request every 2 seconds).")
+	flag_i_asset_rate_limit_cleanup_delay     = config.NewInt("rate-limit-asset-cleanup", 17, "Seconds between rate limit cleanups.")
+	flag_i_asset_rate_limit_entry_ttl         = config.NewInt("rate-limit-asset-ttl", 17, "Seconds a rate limit entry exists for before cleanup is triggered.")
+	flag_s_trusted_proxies                    = config.NewString("trusted-proxies", "", "Configure the web server to forward client IP addresses to the application if a proxy is used such as Nginx; set that proxy's IP here.")
 
 	// Atomics
 	a_b_gematria_loaded   = atomic.Bool{}
