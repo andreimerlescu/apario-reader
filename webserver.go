@@ -15,6 +15,7 @@ import (
 	`sync`
 	"time"
 
+	go_smartchan `github.com/andreimerlescu/go-smartchan`
 	"github.com/didip/tollbooth"
 	"github.com/didip/tollbooth/limiter"
 	"github.com/didip/tollbooth_gin"
@@ -315,6 +316,7 @@ func getSearch(c *gin.Context) {
 
 	if len(query) == 0 {
 		c.Redirect(http.StatusTemporaryRedirect, "/")
+		return
 	}
 
 	query_analysis := AnalyzeQuery(query)
@@ -329,8 +331,9 @@ func getSearch(c *gin.Context) {
 	exclusive_page_identifiers = make(map[string]struct{})
 
 	var wg sync.WaitGroup
-	ch_found_inclusive_identifiers := make(chan string, *flag_i_search_concurrency_buffer)
-	ch_found_exclusive_identifiers := make(chan string, *flag_i_search_concurrency_buffer)
+	sch_found_inclusive_identifiers := go_smartchan.NewSmartChan(*flag_i_search_concurrency_buffer)
+	sch_found_exclusive_identifiers := go_smartchan.NewSmartChan(*flag_i_search_concurrency_buffer)
+	ch_done_searching := make(chan struct{})
 
 	sem_query_limiter := sema.New(*flag_i_search_concurrency_limiter)
 
@@ -338,75 +341,75 @@ func getSearch(c *gin.Context) {
 	for _, word := range query_analysis.Ands {
 		wg.Add(1)
 		sem_query_limiter.Acquire()
-		go func(ctx context.Context, word string, ch chan string, sem sema.Semaphore) {
+		go func(ctx context.Context, word string, sch *go_smartchan.SmartChan, sem sema.Semaphore) {
 			defer wg.Done()
 			defer sem.Release()
-			results, err := find_pages_for_word(ctx, word)
+			err := find_pages_for_word(ctx, sch, word)
 			if err != nil {
 				log.Printf("failed to [AND] find_pages_for_word(%v) due to err: %v", word, err)
 				return
 			}
-			for result, _ := range results {
-				select {
-				case <-ctx.Done():
-					return
-				case ch <- result:
-				}
-			}
-		}(ctx, word, ch_found_inclusive_identifiers, sem_query_limiter)
+		}(ctx, word, sch_found_inclusive_identifiers, sem_query_limiter)
 	}
 
 	// nots
 	for _, word := range query_analysis.Nots {
 		wg.Add(1)
 		sem_query_limiter.Acquire()
-		go func(ctx context.Context, word string, ch chan string, sem sema.Semaphore) {
+		go func(ctx context.Context, word string, sch *go_smartchan.SmartChan, sem sema.Semaphore) {
 			defer wg.Done()
 			defer sem.Release()
-			results, err := find_pages_for_word(ctx, word)
+			err := find_pages_for_word(ctx, sch, word)
 			if err != nil {
 				log.Printf("failed to [NOT] find_pages_for_word(%v) due to err: %v", word, err)
 				return
 			}
-			for result, _ := range results {
-				select {
-				case <-ctx.Done():
-					return
-				case ch <- result:
-				}
-			}
-		}(ctx, word, ch_found_exclusive_identifiers, sem_query_limiter)
+		}(ctx, word, sch_found_exclusive_identifiers, sem_query_limiter)
 	}
 
-	wg.Wait()
-	close(ch_found_inclusive_identifiers)
-	close(ch_found_exclusive_identifiers)
+	go func() {
+		wg.Wait()
+		sch_found_inclusive_identifiers.Close()
+		sch_found_exclusive_identifiers.Close()
+		close(ch_done_searching)
+	}()
 
 	for {
 		select {
 		case <-ctx.Done():
 			deliver_search_results(c, query, query_analysis, inclusive_page_identifiers, exclusive_page_identifiers)
 			return
-		case page_identifier, channel_open := <-ch_found_inclusive_identifiers:
+		case <-ch_done_searching:
+			deliver_search_results(c, query, query_analysis, inclusive_page_identifiers, exclusive_page_identifiers)
+			return
+		case data, channel_open := <-sch_found_inclusive_identifiers.Chan():
 			if channel_open {
-				mu_inclusive.RLock()
-				_, identifier_already_defined := inclusive_page_identifiers[page_identifier]
-				mu_inclusive.RUnlock()
-				if !identifier_already_defined {
-					mu_inclusive.Lock()
-					inclusive_page_identifiers[page_identifier] = struct{}{}
-					mu_inclusive.Unlock()
+				page_identifier, ok := data.(string)
+				if ok {
+					mu_inclusive.RLock()
+					_, identifier_already_defined := inclusive_page_identifiers[page_identifier]
+					mu_inclusive.RUnlock()
+					if !identifier_already_defined {
+						mu_inclusive.Lock()
+						inclusive_page_identifiers[page_identifier] = struct{}{}
+						mu_inclusive.Unlock()
+					}
+				} else {
+					log.Printf("failed to cast data, channel_open := <-sch_found_inclusive_identifiers.Chan() as a string")
 				}
 			}
-		case page_identifier, channel_open := <-ch_found_exclusive_identifiers:
+		case data, channel_open := <-sch_found_exclusive_identifiers.Chan():
 			if channel_open {
-				mu_exclusive.RLock()
-				_, identifier_already_defined := exclusive_page_identifiers[page_identifier]
-				mu_exclusive.RUnlock()
-				if !identifier_already_defined {
-					mu_exclusive.Lock()
-					exclusive_page_identifiers[page_identifier] = struct{}{}
-					mu_exclusive.Unlock()
+				page_identifier, ok := data.(string)
+				if ok {
+					mu_exclusive.RLock()
+					_, identifier_already_defined := exclusive_page_identifiers[page_identifier]
+					mu_exclusive.RUnlock()
+					if !identifier_already_defined {
+						mu_exclusive.Lock()
+						exclusive_page_identifiers[page_identifier] = struct{}{}
+						mu_exclusive.Unlock()
+					}
 				}
 			}
 		}
@@ -414,13 +417,13 @@ func getSearch(c *gin.Context) {
 
 }
 
-func find_pages_for_word(ctx context.Context, query string) (map[string]struct{}, error) {
+func find_pages_for_word(ctx context.Context, sch *go_smartchan.SmartChan, query string) error {
 	var results = make(map[string]struct{})
 	mu_word_pages.RLock()
 	for word, pages := range m_word_pages {
 		select {
 		case <-ctx.Done():
-			return nil, ctx.Err()
+			return ctx.Err()
 		default:
 		}
 		var distance float64
@@ -432,7 +435,17 @@ func find_pages_for_word(ctx context.Context, query string) (map[string]struct{}
 			distance = smetrics.Jaro(query, word)
 			if distance >= *flag_f_search_jaro_threshold {
 				for page_identifier, _ := range pages {
-					results[page_identifier] = struct{}{}
+					select {
+					case <-ctx.Done():
+						return ctx.Err()
+					default:
+					}
+					if sch.CanWrite() {
+						err := sch.Write(page_identifier)
+						if err != nil {
+							return err
+						}
+					}
 				}
 			}
 		} else if *flag_s_search_algorithm == "soundex" {
@@ -440,47 +453,97 @@ func find_pages_for_word(ctx context.Context, query string) (map[string]struct{}
 			word_soundex := smetrics.Soundex(word)
 			if query_soundex == word_soundex {
 				for page_identifier, _ := range pages {
-					results[page_identifier] = struct{}{}
+					select {
+					case <-ctx.Done():
+						return ctx.Err()
+					default:
+					}
+					if sch.CanWrite() {
+						err := sch.Write(page_identifier)
+						if err != nil {
+							return err
+						}
+					}
 				}
 			}
 		} else if *flag_s_search_algorithm == "ukkonen" {
 			score := smetrics.Ukkonen(query, word, *flag_i_search_ukkonen_icost, *flag_i_search_ukkonen_dcost, *flag_i_search_ukkonen_scost)
 			if score <= *flag_i_search_ukkonen_max_substitutions {
 				for page_identifier, _ := range pages {
-					results[page_identifier] = struct{}{}
+					select {
+					case <-ctx.Done():
+						return ctx.Err()
+					default:
+					}
+					if sch.CanWrite() {
+						err := sch.Write(page_identifier)
+						if err != nil {
+							return err
+						}
+					}
 				}
 			}
 		} else if *flag_s_search_algorithm == "wagner_fischer" {
 			score := smetrics.WagnerFischer(query, word, *flag_i_search_wagner_fischer_icost, *flag_i_search_wagner_fischer_dcost, *flag_i_search_wagner_fischer_scost)
 			if score <= *flag_i_search_wagner_fischer_max_substitutions {
 				for page_identifier, _ := range pages {
-					results[page_identifier] = struct{}{}
+					select {
+					case <-ctx.Done():
+						return ctx.Err()
+					default:
+					}
+					if sch.CanWrite() {
+						err := sch.Write(page_identifier)
+						if err != nil {
+							return err
+						}
+					}
 				}
 			}
 		} else if *flag_s_search_algorithm == "hamming" && can_use_hamming {
 			substitutions, err := smetrics.Hamming(query, word)
 			if err != nil {
-				return nil, fmt.Errorf("error received when performing Hamming analysis: %v", err)
+				return fmt.Errorf("error received when performing Hamming analysis: %v", err)
 			}
 			if substitutions <= *flag_i_search_hamming_max_substitutions {
 				for page_identifier, _ := range pages {
-					results[page_identifier] = struct{}{}
+					select {
+					case <-ctx.Done():
+						return ctx.Err()
+					default:
+					}
+					if sch.CanWrite() {
+						err := sch.Write(page_identifier)
+						if err != nil {
+							return err
+						}
+					}
 				}
 			}
 		} else { // use jaro_winkler
 			distance = smetrics.JaroWinkler(query, word, *flag_f_search_jaro_winkler_boost_threshold, *flag_i_search_jaro_winkler_prefix_size)
 			if distance >= *flag_f_search_jaro_winkler_threshold {
 				for page_identifier, _ := range pages {
-					results[page_identifier] = struct{}{}
+					select {
+					case <-ctx.Done():
+						return ctx.Err()
+					default:
+					}
+					if sch.CanWrite() {
+						err := sch.Write(page_identifier)
+						if err != nil {
+							return err
+						}
+					}
 				}
 			}
 		}
 	}
 	mu_word_pages.RUnlock()
 	if len(results) == 0 {
-		return nil, fmt.Errorf("no results for %v", query)
+		return fmt.Errorf("no results for %v", query)
 	}
-	return results, nil
+	return nil
 }
 
 func deliver_search_results(c *gin.Context, query string, analysis SearchAnalysis, inclusive map[string]struct{}, exclusive map[string]struct{}) {
