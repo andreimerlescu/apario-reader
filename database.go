@@ -97,6 +97,7 @@ func process_directories(ch <-chan interface{}) {
 func analyze_document_directory(path string) {
 	defer sem_db_directories.Release()
 	defer wg_active_tasks.Done()
+	defer a_i_total_documents.Add(1)
 
 	bytes_json_record, record_json_err := os.ReadFile(filepath.Join(path, "record.json"))
 	if record_json_err != nil {
@@ -167,6 +168,24 @@ func analyze_document_directory(path string) {
 		mu_collection_documents.Unlock()
 	}
 
+	mu_document_page_identifiers_pgno.RLock()
+	_, document_page_identifiers_pgno_defined := m_document_page_identifiers_pgno[record.Identifier]
+	mu_document_page_identifiers_pgno.RUnlock()
+	if !document_page_identifiers_pgno_defined {
+		mu_document_page_identifiers_pgno.Lock()
+		m_document_page_identifiers_pgno[record.Identifier] = make(map[string]uint)
+		mu_document_page_identifiers_pgno.Unlock()
+	}
+
+	mu_document_pgno_page_identifier.RLock()
+	_, document_pgno_page_identifier_defined := m_document_pgno_page_identifier[record.Identifier]
+	mu_document_pgno_page_identifier.RUnlock()
+	if !document_pgno_page_identifier_defined {
+		mu_document_pgno_page_identifier.Lock()
+		m_document_pgno_page_identifier[record.Identifier] = make(map[uint]string)
+		mu_document_pgno_page_identifier.Unlock()
+	}
+
 	for i := uint(1); i <= total_pages; i++ {
 		wg_active_tasks.Add(1)
 		sem_analyze_pages.Acquire()
@@ -177,6 +196,7 @@ func analyze_document_directory(path string) {
 func analyze_page(record_identifier string, path string, i uint) {
 	defer wg_active_tasks.Done()
 	defer sem_analyze_pages.Release()
+	defer a_i_total_pages.Add(1)
 
 	ocr_path := filepath.Join(path, "pages", fmt.Sprintf("ocr.%06d.txt", i))
 	ocr_bytes, ocr_err := os.ReadFile(ocr_path)
@@ -201,22 +221,40 @@ func analyze_page(record_identifier string, path string, i uint) {
 	ocr := string(ocr_bytes)
 	gematria := NewGemScore(ocr)
 
-	mu_page_words.RLock()
-	_, page_words_defined := m_page_words[page_data.Identifier]
-	mu_page_words.RUnlock()
-	if !page_words_defined {
-		mu_page_words.Lock()
-		m_page_words[page_data.Identifier] = make(map[string]struct{})
-		mu_page_words.Unlock()
+	mu_document_page_identifiers_pgno.RLock()
+	_, document_page_identifiers_pgno_defined := m_document_page_identifiers_pgno[record_identifier][page_data.Identifier]
+	mu_document_page_identifiers_pgno.RUnlock()
+	if !document_page_identifiers_pgno_defined {
+		mu_document_page_identifiers_pgno.Lock()
+		m_document_page_identifiers_pgno[record_identifier][page_data.Identifier] = uint(page_data.PageNumber)
+		mu_document_page_identifiers_pgno.Unlock()
+	}
+
+	mu_document_pgno_page_identifier.RLock()
+	_, document_pgno_page_identifier_defined := m_document_pgno_page_identifier[record_identifier][uint(page_data.PageNumber)]
+	mu_document_pgno_page_identifier.RUnlock()
+	if !document_pgno_page_identifier_defined {
+		mu_document_pgno_page_identifier.Lock()
+		m_document_pgno_page_identifier[record_identifier][uint(page_data.PageNumber)] = page_data.Identifier
+		mu_document_pgno_page_identifier.Unlock()
 	}
 
 	words := strings.Fields(ocr)
 	for _, word := range words {
 		word = strings.ToLower(word)
 
-		mu_page_words.Lock()
-		m_page_words[page_data.Identifier][word] = struct{}{}
-		mu_page_words.Unlock()
+		mu_word_pages.RLock()
+		_, word_pages_defined := m_word_pages[word]
+		mu_word_pages.RUnlock()
+		if !word_pages_defined {
+			mu_word_pages.Lock()
+			m_word_pages[word] = make(map[string]struct{})
+			mu_word_pages.Unlock()
+		}
+
+		mu_word_pages.Lock()
+		m_word_pages[word][page_data.Identifier] = struct{}{}
+		mu_word_pages.Unlock()
 
 		word_score := NewGemScore(word)
 
@@ -284,26 +322,27 @@ func analyze_page(record_identifier string, path string, i uint) {
 		mu_page_gematria_simple.Unlock()
 	}
 
-	mu_document_pages.RLock()
-	_, pages_defined := m_document_pages[record_identifier]
-	mu_document_pages.RUnlock()
+	mu_document_page_number_page.RLock()
+	_, pages_defined := m_document_page_number_page[record_identifier]
+	mu_document_page_number_page.RUnlock()
 	if !pages_defined {
-		mu_document_pages.Lock()
-		m_document_pages[record_identifier] = make(map[uint]Page)
-		mu_document_pages.Unlock()
+		mu_document_page_number_page.Lock()
+		m_document_page_number_page[record_identifier] = make(map[uint]Page)
+		mu_document_page_number_page.Unlock()
 	}
 
-	mu_document_pages.RLock()
-	page, page_defined := m_document_pages[record_identifier][i]
-	mu_document_pages.RUnlock()
+	mu_document_page_number_page.RLock()
+	page, page_defined := m_document_page_number_page[record_identifier][i]
+	mu_document_page_number_page.RUnlock()
 	if len(page.Identifier) == 0 || !page_defined {
-		mu_document_pages.Lock()
-		m_document_pages[record_identifier][i] = Page{
-			FullText:   ocr,
-			PageNumber: i,
-			Identifier: page_data.Identifier,
-			Gematria:   gematria,
+		mu_document_page_number_page.Lock()
+		m_document_page_number_page[record_identifier][i] = Page{
+			Identifier:         page_data.Identifier,
+			DocumentIdentifier: record_identifier,
+			FullText:           ocr,
+			PageNumber:         i,
+			Gematria:           gematria,
 		}
-		mu_document_pages.Unlock()
+		mu_document_page_number_page.Unlock()
 	}
 }

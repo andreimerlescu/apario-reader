@@ -146,7 +146,7 @@ func startCertReloader() {
 				mu_cert.Lock()
 				cert = newCert
 				mu_cert.Unlock()
-			case <-ch_cert_reloader_cancel:
+			case <-ch_cert_reloader_cancel.Chan():
 				ticker.Stop()
 				return
 			}

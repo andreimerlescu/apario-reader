@@ -5,3 +5,16 @@ limit: 369
 directories-limiter: 41
 pages-limiter: 1107
 directory-buffer: 1107
+site-title: IDOREAD.com
+enable-cors: false
+enable-csp: false
+unsecure-port: 8080
+secure-port: 8443
+auto-tls: true
+tls-company: Project Apario LLC
+tls-domain-name: projectapario.com
+tls-san-ip: 127.0.0.1
+tls-additional-domains: idoread.com
+csp-domains-csv: localhost:8080
+company-name: Project Apario LLC
+primary-domain: idoread.com

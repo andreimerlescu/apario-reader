@@ -86,9 +86,8 @@ func main() {
 		}
 
 		ch_db_directories.Close()
-
-		close(ch_cert_reloader_cancel)
-		close(ch_webserver_done)
+		ch_cert_reloader_cancel.Close()
+		ch_webserver_done.Close()
 
 		fmt.Printf("Completed running in %d", time.Since(startedAt))
 
@@ -141,17 +140,18 @@ func main() {
 		slog.Error("failed to load the database with error %v", err)
 		return
 	}
+
 	wg_active_tasks.Wait()
 
 	slog.Info("done loading the application's database into memory")
 
-	go NewWebServer(ctx, ch_webserver_done)
+	go NewWebServer(ctx)
 
 	for {
 		select {
 		case <-ctx.Done():
 			fatalf_stout("Main context canceled, exiting application now. Reason: %v", ctx.Err())
-		case <-ch_webserver_done:
+		case <-ch_webserver_done.Chan():
 			cancel()
 		}
 	}
