@@ -9,7 +9,7 @@
 <body>
     <main>
         <div class="px-4 py-5 my-5 text-center">
-            <img class="d-block mx-auto mb-4" src="/assets/images/idoread_logo2024.jpg" alt="{{ .title }}"/>
+            <img class="d-block mx-auto mb-4" src='/assets/images/idoread_logo2024-{{ if eq .dark_mode "1" }}dark{{else}}light{{end}}.png' alt="{{ .title }}"/>
             <div class="col-lg-6 mx-auto">
                 <p class="lead mb-4">Research {{ .total_documents }} documents containing over {{ .total_pages }} pages.</p>
                 <div class="d-grid gap-2 d-sm-flex justify-content-sm-center">
@@ -25,7 +25,7 @@
             </div>
             <div class="col-lg-6 mx-auto">
                 <p class="mt-4">
-                    {{ .title }} &copy; 2024. All Rights Reserved.
+                    {{ .domain }} &copy; 2024. All Rights Reserved.
                     <br/>
                     <a href="{{ .domain }}" title="{{ .company }}">{{ .domain }}</a> is owned and operated by <b>{{ .company }}</b>.
                 </p>
@@ -39,12 +39,12 @@
                     <a href="/legal/coppa" title="Children Online Privacy Protection Act (COPPA)" target="_blank">COPPA</a>
                     &middot;
                     <a href="/legal/gdpr" title="European Union: General Data Protection Regulation (GDPR)" target="_blank">GDPR</a>
-                    &middot;
+                    <br>
                     <a href="/legal/community-standards" title="Community Standards" target="_blank">Community Standards</a>
                     &middot;
                     <a href="/contact" title="Contact {{ .company }}" target="_blank">Contact Us</a>
                     &middot;
-                    {{ if eq .dark_mode "1" }}
+                    {{ if eq .dark_mode "0" }}
                         <a href="/dark" title="Enable Dark Mode">Dark Mode</a>
                     {{ else }}
                         <a href="/light" title="Enable Light Mode">Light Mode</a>

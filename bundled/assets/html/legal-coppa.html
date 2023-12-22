@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en" data-bs-theme='{{ if eq .dark_mode "1" }}dark{{else}}light{{end}}'>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ .title }}</title>
+    <link href="/assets/css/bootstrap.5.3.2.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+</head>
+<body>
+<main>
+    <div class="px-4 py-5 my-5 text-center">
+        <img class="d-block mx-auto mb-4" src='/assets/images/idoread_logo2024-{{ if eq .dark_mode "1" }}dark{{else}}light{{end}}.png' alt="{{ .title }}"/>
+        <div class="col-lg-6 mx-auto">
+            <h1>Legal / COPPA</h1>
+            <p class="lead mb-4">Children under the age of 17 years old <b>MUST</b> have parental/guardian consent prior to using this platform.</p>
+        </div>
+        <div class="col-lg-6 mx-auto">
+            <p class="mt-4">
+                {{ .domain }} &copy; 2024. All Rights Reserved.
+                <br/>
+                <a href="{{ .domain }}" title="{{ .company }}">{{ .domain }}</a> is owned and operated by <b>{{ .company }}</b>.
+            </p>
+            <p>
+                <a href="/legal/license" title="License" target="_blank">License</a>
+                &middot;
+                <a href="/legal/terms" title="Terms of Service" target="_blank">Terms of Service</a>
+                &middot;
+                <a href="/legal/privacy" title="Privacy Policy" target="_blank">Privacy Policy</a>
+                &middot;
+                <a href="/legal/coppa" title="Children Online Privacy Protection Act (COPPA)" target="_blank">COPPA</a>
+                &middot;
+                <a href="/legal/gdpr" title="European Union: General Data Protection Regulation (GDPR)" target="_blank">GDPR</a>
+                <br>
+                <a href="/legal/community-standards" title="Community Standards" target="_blank">Community Standards</a>
+                &middot;
+                <a href="/contact" title="Contact {{ .company }}" target="_blank">Contact Us</a>
+                &middot;
+                {{ if eq .dark_mode "0" }}
+                <a href="/dark" title="Enable Dark Mode">Dark Mode</a>
+                {{ else }}
+                <a href="/light" title="Enable Light Mode">Light Mode</a>
+                {{ end }}
+            </p>
+        </div>
+    </div>
+</main>
+<script src="/assets/js/bootstrap.bundle.5.3.2.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
+</body>
+</html>

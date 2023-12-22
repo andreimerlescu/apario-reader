@@ -18,6 +18,8 @@ tls-additional-domains: idoread.com
 csp-domains-csv: localhost:8080
 company-name: Project Apario LLC
 primary-domain: idoread.com
+cookie-domain: localhost:8080
 search-concurrency-buffer: 91604
 search-concurrency-limiter: 91604
 search-timeout-seconds: 30
+concurrent-searches: 1

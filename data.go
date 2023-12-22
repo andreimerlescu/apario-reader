@@ -162,6 +162,7 @@ var (
 	flag_b_csp_block_mixed_content                      = config.NewBool("csp-block-mixed-content", true, "Enable/Disable automatically blocking mixed HTTP and HTTPS content for requests via CSP")
 	flag_s_csp_report_uri                               = config.NewString("csp-report-uri", "/security/csp-report", "Path for content security policy violation reports to get logged")
 	flag_s_config_file                                  = config.NewString("config", filepath.Join(".", "config.yaml"), "Configuration file")
+	flag_i_concurrent_searches                          = config.NewInt("concurrent-searches", 30, "maximum number of allowed concurrent searches before a waiting room appears")
 	flag_s_search_algorithm                             = config.NewString("search-algorithm", "jarrow_winkler", "values are wagner_fisher, ukkonen, jaro, jaro_winkler, soundex, hamming ; default is jaro_winkler")
 	flag_i_search_concurrency_buffer                    = config.NewInt("search-concurrency-buffer", 369, "buffer channel size for search results ; default = 369")
 	flag_i_search_concurrency_limiter                   = config.NewInt("search-concurrency-limiter", 9, "concurrent keyword processing per search query ; default = 9")
@@ -206,6 +207,7 @@ var (
 	flag_s_number_decimal_place                         = config.NewString("decimal-symbol", ",", "symbol for decimals, default is .")
 	flag_s_dark_mode_cookie                             = config.NewString("dark-mode-cookie-name", "dark-mode", "set the name of the cookie for dark mode")
 	flag_b_use_cookies                                  = config.NewBool("use-cookies", true, "toggle using cookies or not - cookies and sessions can be true but both cannot be false")
+	flag_s_cookie_domain                                = config.NewString("cookie-domain", "localhost:8080", "domain to use for cookies")
 	flag_b_use_sessions                                 = config.NewBool("use-sessions", false, "toggle using sessions or not - cookies and sessions can be true but both cannot be false")
 	flag_s_session_store                                = config.NewString("session-store", "cookie", "where to store sessions - choices are cookie or redis ; cannot be cookie if use-cookies is false")
 	flag_i_session_store_redis_connections              = config.NewInt("session-store-redis-connections", 10, "number of connections to maintain with redis between this application")
@@ -228,10 +230,12 @@ var (
 	a_b_locations_loaded  = atomic.Bool{}
 	a_i_total_documents   = atomic.Int64{}
 	a_i_total_pages       = atomic.Int64{}
+	a_i_waiting_room      = atomic.Int64{}
 
 	// Semaphores
-	sem_db_directories = sema.New(*flag_i_sem_directories)
-	sem_analyze_pages  = sema.New(*flag_i_sem_pages)
+	sem_db_directories      = sema.New(*flag_i_sem_directories)
+	sem_analyze_pages       = sema.New(*flag_i_sem_pages)
+	sem_concurrent_searches = sema.New(*flag_i_concurrent_searches)
 
 	// Channels
 	ch_db_directories       = sch.NewSmartChan(*flag_i_directory_buffer)

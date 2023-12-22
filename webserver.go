@@ -100,44 +100,22 @@ func NewWebServer(ctx context.Context) {
 		r.GET("/assets/:directory/:filename", tollbooth_gin.LimitHandler(assetRateLimiter), getAsset)
 
 		// Go Web Server Index Path
-		r.GET("/", func(c *gin.Context) {
-			data, err := bundled_files.ReadFile("bundled/assets/html/index.html")
-			if err != nil {
-				c.String(http.StatusInternalServerError, "Failed to load index.html")
-				return
-			}
-
-			tmpl := template.Must(template.New("index").Parse(string(data)))
-
-			var htmlBuilder strings.Builder
-			if err := tmpl.Execute(&htmlBuilder, gin.H{
-				"title":           *flag_s_site_title,
-				"company":         *flag_s_site_company,
-				"domain":          *flag_s_primary_domain,
-				"total_documents": human_int(a_i_total_documents.Load()),
-				"total_pages":     human_int(a_i_total_pages.Load() - 1),
-				"dark_mode":       getIfDarkMode(c),
-			}); err != nil {
-				c.String(http.StatusInternalServerError, "error executing template", err)
-				log.Println(err)
-				return
-			}
-			c.Header("Content-Type", "text/html; charset=UTF-8")
-			c.String(http.StatusOK, htmlBuilder.String())
-		})
+		r.GET("/", getIndex)
 
 		// Web App Routes
 		r.GET("/search", getSearch)
 
+		r.GET("/waiting-room", getWaitingRoom)
+
 		r.GET("/dark", func(c *gin.Context) {
-			c.SetCookie(*flag_s_dark_mode_cookie, strconv.Itoa(1), 31881600, "/", *flag_s_primary_domain, false, true)
-			c.SetCookie(*flag_s_dark_mode_cookie, strconv.Itoa(1), 31881600, "/", *flag_s_primary_domain, true, true)
+			c.SetCookie(*flag_s_dark_mode_cookie, strconv.Itoa(1), 31881600, "/", *flag_s_cookie_domain, false, true)
+			c.SetCookie(*flag_s_dark_mode_cookie, strconv.Itoa(1), 31881600, "/", *flag_s_cookie_domain, true, true)
 			c.Redirect(http.StatusTemporaryRedirect, "/")
 		})
 
 		r.GET("/light", func(c *gin.Context) {
-			c.SetCookie(*flag_s_dark_mode_cookie, strconv.Itoa(0), 31881600, "/", *flag_s_primary_domain, false, true)
-			c.SetCookie(*flag_s_dark_mode_cookie, strconv.Itoa(0), 31881600, "/", *flag_s_primary_domain, true, true)
+			c.SetCookie(*flag_s_dark_mode_cookie, strconv.Itoa(0), 31881600, "/", *flag_s_cookie_domain, false, true)
+			c.SetCookie(*flag_s_dark_mode_cookie, strconv.Itoa(0), 31881600, "/", *flag_s_cookie_domain, true, true)
 			c.Redirect(http.StatusTemporaryRedirect, "/")
 		})
 
@@ -205,6 +183,32 @@ func NewWebServer(ctx context.Context) {
 	})
 }
 
+func getIndex(c *gin.Context) {
+	data, err := bundled_files.ReadFile("bundled/assets/html/index.html")
+	if err != nil {
+		c.String(http.StatusInternalServerError, "Failed to load index.html")
+		return
+	}
+
+	tmpl := template.Must(template.New("index").Parse(string(data)))
+
+	var htmlBuilder strings.Builder
+	if err := tmpl.Execute(&htmlBuilder, gin.H{
+		"title":           *flag_s_site_title,
+		"company":         *flag_s_site_company,
+		"domain":          *flag_s_primary_domain,
+		"total_documents": human_int(a_i_total_documents.Load()),
+		"total_pages":     human_int(a_i_total_pages.Load() - 1),
+		"dark_mode":       getIfDarkMode(c),
+	}); err != nil {
+		c.String(http.StatusInternalServerError, "error executing template", err)
+		log.Println(err)
+		return
+	}
+	c.Header("Content-Type", "text/html; charset=UTF-8")
+	c.String(http.StatusOK, htmlBuilder.String())
+}
+
 func getIfDarkMode(c *gin.Context) string {
 	// 0 = light mode ; 1 = dark mode
 	dark_mode, dark_mode_err := c.Cookie(*flag_s_dark_mode_cookie)
@@ -217,6 +221,36 @@ func getIfDarkMode(c *gin.Context) string {
 			return "0"
 		}
 	}
+}
+
+func getWaitingRoom(c *gin.Context) {
+	data, err := bundled_files.ReadFile("bundled/assets/html/waiting-room.html")
+	if err != nil {
+		c.String(http.StatusInternalServerError, "Failed to load index.html")
+		return
+	}
+
+	tmpl := template.Must(template.New("index").Parse(string(data)))
+
+	var htmlBuilder strings.Builder
+	if err := tmpl.Execute(&htmlBuilder, gin.H{
+		"title":             fmt.Sprintf("%v - Waiting Room", *flag_s_site_title),
+		"company":           *flag_s_site_company,
+		"domain":            *flag_s_primary_domain,
+		"active_searches":   human_int(int64(sem_concurrent_searches.Len())),
+		"i_active_searches": int64(sem_concurrent_searches.Len()),
+		"max_searches":      human_int(int64(*flag_i_concurrent_searches)),
+		"i_max_searches":    int64(*flag_i_concurrent_searches),
+		"in_waiting_room":   human_int(a_i_waiting_room.Load()),
+		"i_in_waiting_room": a_i_waiting_room.Load(),
+		"dark_mode":         getIfDarkMode(c),
+	}); err != nil {
+		c.String(http.StatusInternalServerError, "error executing template", err)
+		log.Println(err)
+		return
+	}
+	c.Header("Content-Type", "text/html; charset=UTF-8")
+	c.String(http.StatusOK, htmlBuilder.String())
 }
 
 func getIcon(c *gin.Context) {
@@ -309,6 +343,14 @@ func getAsset(c *gin.Context) {
 }
 
 func getSearch(c *gin.Context) {
+	a_i_waiting_room.Add(1)
+	if sem_concurrent_searches.Len() > *flag_i_concurrent_searches {
+		c.Redirect(http.StatusTemporaryRedirect, "/waiting-room")
+		return
+	}
+	sem_concurrent_searches.Acquire()
+	defer sem_concurrent_searches.Release()
+	a_i_waiting_room.Add(-1)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(*flag_i_search_timeout_seconds))
 	defer cancel()
 	query := c.DefaultQuery("query", "")
