@@ -97,7 +97,8 @@ func process_directories(ch <-chan interface{}) {
 func analyze_document_directory(path string) {
 	defer sem_db_directories.Release()
 	defer wg_active_tasks.Done()
-	defer a_i_total_documents.Add(1)
+
+	document_index := a_i_total_documents.Add(1)
 
 	bytes_json_record, record_json_err := os.ReadFile(filepath.Join(path, "record.json"))
 	if record_json_err != nil {
@@ -143,6 +144,15 @@ func analyze_document_directory(path string) {
 		title = record.Identifier
 	}
 
+	mu_document_identifier_directory.RLock()
+	_, document_identifier_directory_defined := m_document_identifier_directory[record.Identifier]
+	mu_document_identifier_directory.RUnlock()
+	if !document_identifier_directory_defined {
+		mu_document_identifier_directory.Lock()
+		m_document_identifier_directory[record.Identifier] = path
+		mu_document_identifier_directory.Unlock()
+	}
+
 	mu_collection_documents.RLock()
 	_, documents_defined := m_collection_documents[collection_name]
 	mu_collection_documents.RUnlock()
@@ -186,6 +196,15 @@ func analyze_document_directory(path string) {
 		mu_document_pgno_page_identifier.Unlock()
 	}
 
+	mu_index_document_identifier.RLock()
+	_, index_document_identifier_defined := m_index_document_identifier[document_index]
+	mu_index_document_identifier.RUnlock()
+	if !index_document_identifier_defined {
+		mu_index_document_identifier.Lock()
+		m_index_document_identifier[document_index] = record.Identifier
+		mu_index_document_identifier.Unlock()
+	}
+
 	for i := uint(1); i <= total_pages; i++ {
 		wg_active_tasks.Add(1)
 		sem_analyze_pages.Acquire()
@@ -196,7 +215,8 @@ func analyze_document_directory(path string) {
 func analyze_page(record_identifier string, path string, i uint) {
 	defer wg_active_tasks.Done()
 	defer sem_analyze_pages.Release()
-	defer a_i_total_pages.Add(1)
+
+	page_index := a_i_total_pages.Add(1)
 
 	ocr_path := filepath.Join(path, "pages", fmt.Sprintf("ocr.%06d.txt", i))
 	ocr_bytes, ocr_err := os.ReadFile(ocr_path)
@@ -237,6 +257,35 @@ func analyze_page(record_identifier string, path string, i uint) {
 		mu_document_pgno_page_identifier.Lock()
 		m_document_pgno_page_identifier[record_identifier][uint(page_data.PageNumber)] = page_data.Identifier
 		mu_document_pgno_page_identifier.Unlock()
+	}
+
+	mu_page_identifier_document.RLock()
+	_, page_identifier_document_defined := m_page_identifier_document[page_data.Identifier]
+	mu_page_identifier_document.RUnlock()
+	if !page_identifier_document_defined {
+		mu_page_identifier_document.Lock()
+		m_page_identifier_document[page_data.Identifier] = record_identifier
+		mu_page_identifier_document.Unlock()
+	}
+
+	mu_page_identifier_page_number.RLock()
+	_, page_identifier_page_number_defined := m_page_identifier_page_number[page_data.Identifier]
+	mu_page_identifier_page_number.RUnlock()
+	if !page_identifier_page_number_defined {
+		mu_page_identifier_page_number.Lock()
+		m_page_identifier_page_number[page_data.Identifier] = uint(page_data.PageNumber)
+		mu_page_identifier_page_number.Unlock()
+	}
+
+	mu_index_page_identifier.RLock()
+	existing_entry, page_index_defined := m_index_page_identifier[page_index]
+	mu_index_page_identifier.RUnlock()
+	if !page_index_defined {
+		mu_index_page_identifier.Lock()
+		m_index_page_identifier[page_index] = page_data.Identifier
+		mu_index_page_identifier.Unlock()
+	} else {
+		log.Printf("[skipping] found a duplicate m_index_page_identifier[page_index] %d = %v", page_index, existing_entry)
 	}
 
 	words := strings.Fields(ocr)

@@ -1,10 +1,10 @@
 ---
 database: "database/stargate"
-buffer: 1107
-limit: 1107
-directories-limiter: 41
-pages-limiter: 1107
-directory-buffer: 1107
+buffer: 3301
+limit: 3301
+directories-limiter: 120
+pages-limiter: 3301
+directory-buffer: 3301
 site-title: DEV - I Do Read
 enable-cors: false
 enable-csp: false

@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en" data-bs-theme='{{ if eq .dark_mode "1" }}dark{{else}}light{{end}}'>
+<head>
+    <title>{{ .title }}</title>
+    {{ render_partial "head" .dark_mode }}
+</head>
+<body>
+<main>
+    <div class="px-4 py-5 my-5 text-center">
+        {{ render_partial "header" .dark_mode }}
+        <div class="col-lg-6 mx-auto">
+            <p class="lead mb-4">All Words</p>
+        </div>
+        {{ render_partial "footer" .dark_mode }}
+    </div>
+</main>
+{{ render_partial "foot" .dark_mode }}
+</body>
+</html>

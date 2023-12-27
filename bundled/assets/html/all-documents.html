@@ -8,8 +8,45 @@
 <main>
     <div class="px-4 py-5 my-5 text-center">
         {{ render_partial "header" .dark_mode }}
-        <div class="col-lg-6 mx-auto">
+        <div class="container">
             <p class="lead mb-4">All Documents</p>
+            <div class="row row-cols-1 row-cols-sm-2 row-cols-md-4 g-4">
+                {{ range .page_identifiers }}
+                <div class="col">
+                    <div class="card text-center mb-3">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ . }}</h5>
+                            <p class="card-text">{{ . }}</p>
+                            <a href="#" class="btn btn-primary">{{ . }}</a>
+                        </div>
+                    </div>
+                </div>
+                {{ end }}
+            </div>
+            <div class="btn-group" role="group" aria-label="Pagination">
+                <a href="?page=1&limit={{ .limit }}" class="btn btn-outline-primary {{ if eq .i_page 1 }}disabled{{ end }}">First</a>
+                <a href="?page={{minus .i_page 1}}&limit={{ .limit }}" class="btn btn-outline-primary {{ if eq .i_page 1 }}disabled{{ end }}">Previous</a>
+
+                {{ if gt (.i_page | minus 3) 2 }}
+                <span class="btn btn-outline-primary disabled">...</span>
+                {{ end }}
+
+                {{ $currentPage := .i_page }}
+                {{ $totalPages := .i_total_pages }}
+                {{ range $i := .i_page | minus 3 | max 1 | sequence ( .i_page | plus 3 | min .i_total_pages ) }}
+                <a href="?page={{$i}}&limit={{ .limit }}" class="btn btn-outline-primary {{ if eq $currentPage $i }}disabled{{ end }}">{{ $i }}</a>
+                {{ end }}
+
+                {{ if lt (.i_page | plus 3) (.i_total_pages | minus 1) }}
+                <span class="btn btn-outline-primary disabled">...</span>
+                {{ end }}
+
+                <a href="?page={{plus .i_page 1}}&limit={{ .i_limit }}" class="btn btn-outline-primary {{ if eq .i_page .i_total_pages }}disabled{{ end }}">Next</a>
+                <a href="?page={{.i_total_pages}}&limit={{ .i_limit }}" class="btn btn-outline-primary {{ if eq .i_page .i_total_pages }}disabled{{ end }}">Last</a>
+            </div>
+            <div class="mt-2">
+                Page {{ .page }} of {{ .total_pages }} / Total Documents: {{ .total_documents }}
+            </div>
         </div>
         {{ render_partial "footer" .dark_mode }}
     </div>

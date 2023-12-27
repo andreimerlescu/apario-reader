@@ -19,10 +19,12 @@ package main
 
 import (
 	`context`
+	crypto_rand "crypto/rand"
 	`crypto/tls`
 	"fmt"
 	`html/template`
 	"image/color"
+	`math/big`
 	"path/filepath"
 	`regexp`
 	`sync`
@@ -84,6 +86,21 @@ var (
 
 	m_document_pgno_page_identifier  = make(map[string]map[uint]string) // map[DocumentIdentifier]map[PageNumber]PageIdentifier
 	mu_document_pgno_page_identifier = sync.RWMutex{}
+
+	m_page_identifier_document  = make(map[string]string) // map[PageIdentifier]DocumentIdentifier
+	mu_page_identifier_document = sync.RWMutex{}
+
+	m_page_identifier_page_number  = make(map[string]uint) // map[PageIdentifier]PageNumber
+	mu_page_identifier_page_number = sync.RWMutex{}
+
+	m_index_page_identifier  = make(map[int64]string) // map[Index]PageIdentifier
+	mu_index_page_identifier = sync.RWMutex{}
+
+	m_index_document_identifier  = make(map[int64]string) // map[Index]DocumentIdentifier
+	mu_index_document_identifier = sync.RWMutex{}
+
+	m_document_identifier_directory  = make(map[string]string) // map[DocumentIdentifier]checksum inside *flag_s_database
+	mu_document_identifier_directory = sync.RWMutex{}
 
 	// TODO: maybe i should switch this to map[GemScore.English]map[word]map[PageIdentifier]struct{}
 	m_page_gematria_english  = make(map[uint]map[string]map[string]struct{}) // map[GemScore.English]map[PageIdentifier]map[word]struct{}
@@ -389,4 +406,57 @@ type SearchAnalysis struct {
 	Ors  map[uint]string
 	Ands []string
 	Nots []string
+}
+
+func f_i_random_int(limit int) int {
+	if limit <= 0 {
+		return 0
+	}
+
+	newInt, err := crypto_rand.Int(crypto_rand.Reader, big.NewInt(int64(limit)))
+	if err != nil {
+		fmt.Println("Error:", err)
+		return 0
+	}
+	return int(newInt.Int64())
+}
+
+// f_i_random_int_range return a random int that is between start and limit, will recursively run until match found
+func f_i_random_int_range(start int, limit int) int {
+	i := f_i_random_int(limit)
+	if i >= start && i <= limit {
+		return i
+	} else {
+		return f_i_random_int_range(start, limit) // retry
+	}
+}
+
+func f_i_plus(a, b int) int {
+	return a + b
+}
+
+func f_i_minus(a, b int) int {
+	return a - b
+}
+
+func f_i_sequence(start, end int) []int {
+	var seq []int
+	for i := start; i <= end; i++ {
+		seq = append(seq, i)
+	}
+	return seq
+}
+
+func f_i_max(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
+}
+
+func f_i_min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
