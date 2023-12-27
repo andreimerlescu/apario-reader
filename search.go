@@ -1,131 +1,21 @@
 package main
 
 import (
+	`bytes`
+	`context`
+	`encoding/json`
 	"fmt"
 	"log"
-	"reflect"
+	`net/http`
 	"regexp"
-	"strconv"
 	"strings"
-	"sync"
 	"sync/atomic"
+	`time`
 
-	"github.com/abadojack/whatlanggo"
-	"github.com/k0kubun/pp"
+	go_smartchan `github.com/andreimerlescu/go-smartchan`
+	`github.com/gin-gonic/gin`
+	`github.com/xrash/smetrics`
 )
-
-type SearchOperatorInterface interface {
-	Perform() (r bool)
-}
-
-type SearchOperatorAnd struct{}
-type SearchOperatorNot struct{}
-type SearchOperatorOr struct{}
-
-func (and *SearchOperatorAnd) Perform() (r bool) {
-	return
-}
-
-func (not *SearchOperatorNot) Perform() (r bool) {
-	return
-}
-
-func (or *SearchOperatorOr) Perform() (r bool) {
-	return
-}
-
-type SearchComponent struct {
-	Word            string
-	Operator        SearchOperatorInterface
-	Gem             GemScore
-	PageIdentifiers []string
-}
-
-type Search struct {
-	ex              *sync.Mutex
-	Query           string
-	Components      []SearchComponent
-	PageIdentifiers []string
-	Gem             GemScore
-}
-
-type Q struct {
-	uant *sync.Mutex
-}
-
-func (q Q) New(query string) (s *Search) {
-	defer q.findPageIdentifiers(s, query)
-	s = &Search{
-		ex:              q.uant, // =D #hardpass ~#[ :'-( ]-- C.M.A.R.
-		Query:           query,
-		Components:      []SearchComponent{},
-		PageIdentifiers: []string{},
-		Gem:             NewGemScore(query),
-	}
-	return
-}
-
-func (q Q) findPageIdentifiers(s *Search, query string) {
-	results := WordRegistry().Search(query)
-	for _, wp := range results {
-		s.PageIdentifiers = append(s.PageIdentifiers, wp.pageId)
-	}
-}
-
-func (s *Search) OrDB(q string) *Search {
-	return s
-}
-
-func (s *Search) NotDB(q string) *Search {
-	return s
-}
-
-func (s *Search) ProcessIdentifier(q string, identifier string, operator SearchOperatorInterface) {
-	matched := false
-	for _, component := range s.Components {
-		if component.Word == q && reflect.TypeOf(component.Operator) == reflect.TypeOf(&SearchOperatorAnd{}) {
-			s.ex.Lock()
-			component.PageIdentifiers = append(component.PageIdentifiers, identifier)
-			s.ex.Unlock() // but please wait until marriage first, then have at it love birds
-			matched = true
-			break
-		}
-	}
-
-	if !matched {
-		gem := NewGemScore(q)
-		s.ex.Lock()
-		s.Components = append(s.Components, SearchComponent{
-			Word:            q,
-			Operator:        operator,
-			Gem:             gem,
-			PageIdentifiers: []string{},
-		})
-		s.ex.Unlock() // but please wait until marriage first, then have at it love birds
-	}
-}
-
-type SearchAnalysisPair struct {
-	word           string
-	path           string
-	pageIdentifier string
-	text           string
-	lang           whatlanggo.Info
-	gem            GemScore
-	match          bool
-}
-
-type SearchAnalysisResult struct {
-	word            string
-	gem             GemScore
-	pageIdentifiers []string
-}
-
-type SearchAnalysis struct {
-	Ors  map[uint]string
-	Ands []string
-	Nots []string
-}
 
 func AnalyzeQuery(q string) (sa SearchAnalysis) {
 
@@ -141,6 +31,23 @@ func AnalyzeQuery(q string) (sa SearchAnalysis) {
 	q = strings.Replace(q, `]`, `)`, -1)
 
 	q = fmt.Sprintf("and %v", q)
+
+	printDoneLine := func(line string) {
+		fmt.Printf("#DONE=%v⬆\n", strings.Repeat(`=`, len(line)-6))
+	}
+
+	printInsideBlock := func(str string) {
+		padding := 166 - len(str)
+		pad := ""
+		if padding%2 == 0 {
+			side := padding / 2
+			pad = strings.Repeat(` `, side)
+		} else {
+			side := (padding + 1) / 2
+			pad = strings.Repeat(` `, side)
+		}
+		fmt.Printf("#%v%v%v|\n", pad[0:len(pad)-1], str, pad)
+	}
 
 	log.Println(fmt.Sprintf("RunQuery( `%v` )", q))
 
@@ -236,7 +143,7 @@ func AnalyzeQuery(q string) (sa SearchAnalysis) {
 
 	log.Println("switching to AND...")
 	for i := 1; i < wordLen; i++ {
-		loopIterationLine(i)
+		fmt.Printf("\n#\n##\n###==%v-=> Loop Iteration #%d\n", strings.Repeat(`-`, 162), i)
 
 		if forceNextToAnd.Load() {
 			printInsideBlock(fmt.Sprintf("FORCING PARTIAL WORD #%d `%v` TO BELONG TO        ✅ addToAnd = TRUE    &&    addToNot = FALSE ❌ ", i, prevLoopBufferedWord))
@@ -387,212 +294,158 @@ func AnalyzeQuery(q string) (sa SearchAnalysis) {
 
 }
 
-func printDoneLine(line string) {
-	fmt.Printf("#DONE=%v⬆\n", strings.Repeat(`=`, len(line)-6))
-}
-
-func loopIterationLine(i int) {
-	fmt.Printf("\n#\n##\n###==%v-=> Loop Iteration #%d\n", strings.Repeat(`-`, 162), i)
-}
-
-func IsEven(i int) bool {
-	return i%2 == 0
-}
-
-func printInsideBlock(str string) {
-	padding := 166 - len(str)
-	pad := ""
-	if IsEven(padding) {
-		side := padding / 2
-		pad = strings.Repeat(` `, side)
-	} else {
-		side := (padding + 1) / 2
-		pad = strings.Repeat(` `, side)
-	}
-	fmt.Printf("#%v%v%v|\n", pad[0:len(pad)-1], str, pad)
-}
-
-func removeSoloOrs(partialWord string) string {
-	re, err := regexp.Compile(`\((.*?)or(.*?)\)`)
-	if err != nil {
-		log.Println(err)
-		return partialWord
-	}
-
-	matches := re.FindAllStringSubmatch(partialWord, -1)
-	if len(matches) < 2 {
-		// match
-		partialWord = strings.Replace(partialWord, `and (`, ``, -1)
-		partialWord = strings.Replace(partialWord, `)`, ``, -1)
-	}
-
-	return partialWord
-}
-
-func (sa *SearchAnalysis) parseOrsRegexp(ors []string) string {
-	var or string
-	for _, o := range ors {
-		or = o
-		break
-	}
-
-	orIdStr := strings.Replace(or, "OR_", "", len(or))
-	orId, parseErr := strconv.Atoi(orIdStr)
-	for saorId, saor := range sa.Ors {
-		if saorId == uint(orId) {
-			or = saor
-			orId = int(saorId)
+func find_pages_for_word(ctx context.Context, sch *go_smartchan.SmartChan, query string) error {
+	var results = make(map[string]struct{})
+	mu_word_pages.RLock()
+	for word, pages := range m_word_pages {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
 		}
-	}
-
-	newOr := ""
-
-	if parseErr == nil {
-		pp.Printf("sa.Ors = %v\n", sa.Ors)
-		pp.Printf("or = %v\n", or)
-		pp.Printf("orId = %v\n", orId)
-		newOr = sa.Ors[uint(orId)]
-		pp.Printf("newOr = %v\n", newOr)
-	}
-
-	return newOr
-}
-
-func (sa *SearchAnalysis) findOrsInNots(partialWord string) *SearchAnalysis {
-	log.Println("\t findOrsInNots(", partialWord, ")")
-	compile, err := regexp.Compile(`OR_\d`)
-	if err != nil {
-		panic(err)
-	}
-	ors := compile.FindAllStringSubmatch(partialWord, -1)
-	if len(ors) == 1 {
-		var (
-			or      = sa.parseOrsRegexp(ors[0])
-			newNots []string
-		)
-		for _, a := range sa.Nots {
-			if !strings.Contains(a, or) {
-				a = removeSoloOrs(or)
-				newNots = append(newNots, a)
+		var distance float64
+		var can_use_hamming bool = len(query) == len(word)
+		if len(word) == 0 || len(query) == 0 {
+			continue
+		}
+		if *flag_s_search_algorithm == "jaro" {
+			distance = smetrics.Jaro(query, word)
+			if distance >= *flag_f_search_jaro_threshold {
+				for page_identifier, _ := range pages {
+					select {
+					case <-ctx.Done():
+						return ctx.Err()
+					default:
+					}
+					if sch.CanWrite() {
+						err := sch.Write(page_identifier)
+						if err != nil {
+							return err
+						}
+					}
+				}
+			}
+		} else if *flag_s_search_algorithm == "soundex" {
+			query_soundex := smetrics.Soundex(query)
+			word_soundex := smetrics.Soundex(word)
+			if query_soundex == word_soundex {
+				for page_identifier, _ := range pages {
+					select {
+					case <-ctx.Done():
+						return ctx.Err()
+					default:
+					}
+					if sch.CanWrite() {
+						err := sch.Write(page_identifier)
+						if err != nil {
+							return err
+						}
+					}
+				}
+			}
+		} else if *flag_s_search_algorithm == "ukkonen" {
+			score := smetrics.Ukkonen(query, word, *flag_i_search_ukkonen_icost, *flag_i_search_ukkonen_dcost, *flag_i_search_ukkonen_scost)
+			if score <= *flag_i_search_ukkonen_max_substitutions {
+				for page_identifier, _ := range pages {
+					select {
+					case <-ctx.Done():
+						return ctx.Err()
+					default:
+					}
+					if sch.CanWrite() {
+						err := sch.Write(page_identifier)
+						if err != nil {
+							return err
+						}
+					}
+				}
+			}
+		} else if *flag_s_search_algorithm == "wagner_fischer" {
+			score := smetrics.WagnerFischer(query, word, *flag_i_search_wagner_fischer_icost, *flag_i_search_wagner_fischer_dcost, *flag_i_search_wagner_fischer_scost)
+			if score <= *flag_i_search_wagner_fischer_max_substitutions {
+				for page_identifier, _ := range pages {
+					select {
+					case <-ctx.Done():
+						return ctx.Err()
+					default:
+					}
+					if sch.CanWrite() {
+						err := sch.Write(page_identifier)
+						if err != nil {
+							return err
+						}
+					}
+				}
+			}
+		} else if *flag_s_search_algorithm == "hamming" && can_use_hamming {
+			substitutions, err := smetrics.Hamming(query, word)
+			if err != nil {
+				return fmt.Errorf("error received when performing Hamming analysis: %v", err)
+			}
+			if substitutions <= *flag_i_search_hamming_max_substitutions {
+				for page_identifier, _ := range pages {
+					select {
+					case <-ctx.Done():
+						return ctx.Err()
+					default:
+					}
+					if sch.CanWrite() {
+						err := sch.Write(page_identifier)
+						if err != nil {
+							return err
+						}
+					}
+				}
+			}
+		} else { // use jaro_winkler
+			distance = smetrics.JaroWinkler(query, word, *flag_f_search_jaro_winkler_boost_threshold, *flag_i_search_jaro_winkler_prefix_size)
+			if distance >= *flag_f_search_jaro_winkler_threshold {
+				for page_identifier, _ := range pages {
+					select {
+					case <-ctx.Done():
+						return ctx.Err()
+					default:
+					}
+					if sch.CanWrite() {
+						err := sch.Write(page_identifier)
+						if err != nil {
+							return err
+						}
+					}
+				}
 			}
 		}
-		sa.Nots = newNots
-	} else if len(ors) == 0 {
-		partialWord = removeSoloOrs(partialWord)
-		sa.Nots = append(sa.Nots, partialWord)
 	}
-	return sa
+	mu_word_pages.RUnlock()
+	if len(results) == 0 {
+		return fmt.Errorf("no results for %v", query)
+	}
+	return nil
 }
 
-func (sa *SearchAnalysis) findOrsInAnds(partialWord string) *SearchAnalysis {
-	log.Println("\t findOrsInNots(", partialWord, ")")
-	compile, err := regexp.Compile(`OR_\d`)
+func deliver_search_results(c *gin.Context, query string, analysis SearchAnalysis, inclusive map[string]struct{}, exclusive map[string]struct{}) {
+	var page_identifiers []string
+	for identifier, _ := range inclusive {
+		_, excluded := exclusive[identifier]
+		if !excluded {
+			page_identifiers = append(page_identifiers, identifier)
+		}
+	}
+	result := SearchResult{
+		Query:    query,
+		Analysis: analysis,
+		Total:    len(page_identifiers),
+		//Inclusive: inclusive_page_identifiers,
+		//Exclusive: exclusive_page_identifiers,
+		Results: page_identifiers,
+	}
+
+	marshal, err := json.Marshal(result)
 	if err != nil {
-		panic(err)
-	}
-	ors := compile.FindAllStringSubmatch(partialWord, -1)
-	if len(ors) == 1 {
-		var (
-			or      = sa.parseOrsRegexp(ors[0])
-			newAnds []string
-		)
-		for _, a := range sa.Ands {
-			if !strings.Contains(a, or) {
-				newAnds = append(newAnds, a)
-			}
-		}
-		sa.Ands = newAnds
-	} else if len(ors) == 0 {
-		if strings.Contains(partialWord, `(`) && !strings.Contains(partialWord, `)`) {
-			partialWord = strings.ReplaceAll(partialWord, `(`, ``)
-		} else if !strings.Contains(partialWord, `(`) && strings.Contains(partialWord, `)`) {
-			partialWord = strings.ReplaceAll(partialWord, `)`, ``)
-		}
-
-		partialWord = removeSoloOrs(partialWord)
-		sa.Ands = append(sa.Ands, partialWord)
-	}
-	return sa
-}
-
-type WordPair struct {
-	word   string
-	score  Gematria
-	sum    uint
-	pageId string
-	md5    [16]byte
-}
-
-type WordResults struct {
-	Words []WordPair
-}
-
-func collectIndexedTexts(pairs <-chan WordPair, result chan<- WordResults) {
-	results := WordResults{}
-
-	for pair := range pairs {
-		results.Words = append(results.Words, pair)
-	}
-
-	result <- results
-}
-
-type TWordsRegistry struct {
-	mu    sync.RWMutex
-	Words map[string]WordPair
-}
-
-var tWordRegistryPtr *TWordsRegistry
-
-func WordRegistry() *TWordsRegistry {
-	if tWordRegistryPtr == nil {
-		tWordRegistryPtr = &TWordsRegistry{
-			mu:    sync.RWMutex{},
-			Words: nil,
-		}
-	}
-	return tWordRegistryPtr
-}
-
-func (wr *TWordsRegistry) Add(wp WordPair) (r bool) {
-	if wr.mu.TryLock() {
-		defer wr.mu.Unlock()
-		wr.Words[wp.word] = wp
-		r = true
-	}
-	return
-}
-
-func (wr *TWordsRegistry) Search(query string) (results []WordPair) {
-	// no query
-	if len(query) == 0 {
+		c.String(http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	// no cache
-	if len(wr.Words) == 0 {
-		return
-	}
-
-	// exact match
-	if len(wr.Words[query].word) == len(query) {
-		results = append(results, wr.Words[query])
-		return
-	}
-
-	// multiple words
-	words := strings.Split(query, " ")
-	for _, word := range words {
-		ok := wr.mu.TryRLock()
-		if !ok {
-			panic("failed to issue a TryRLock on the WordRegistry()")
-		}
-		rw := wr.Words[word]
-		wr.mu.Unlock()
-		if len(rw.word) == len(word) {
-			results = append(results, rw)
-		}
-	}
-
+	http.ServeContent(c.Writer, c.Request, "", time.Now(), bytes.NewReader(marshal))
 	return
 }

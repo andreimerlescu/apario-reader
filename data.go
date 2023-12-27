@@ -21,6 +21,7 @@ import (
 	`context`
 	`crypto/tls`
 	"fmt"
+	`html/template`
 	"image/color"
 	"path/filepath"
 	`regexp`
@@ -31,6 +32,7 @@ import (
 	`github.com/andreimerlescu/configurable`
 	cwg `github.com/andreimerlescu/go-countable-waitgroup`
 	sch `github.com/andreimerlescu/go-smartchan`
+	`github.com/gin-gonic/gin`
 
 	`badbitchreads/sema`
 )
@@ -241,6 +243,16 @@ var (
 	ch_db_directories       = sch.NewSmartChan(*flag_i_directory_buffer)
 	ch_cert_reloader_cancel = sch.NewSmartChan(1)
 	ch_webserver_done       = sch.NewSmartChan(1)
+
+	// gin templates
+	gin_func_map          template.FuncMap
+	default_gin_func_vars gin.H
+	// If a new template is needed, and you're going to use it in a new route entry point, make sure that
+	// you define your variables either here at compile time OR within your function. If you choose to
+	// define them inside your function before you invoke your template, make sure that you use the
+	// mu_gin_func_vars mutex to ensure proper locking/unlocking for read/write.
+	gin_func_vars    map[string]gin.H
+	mu_gin_func_vars = sync.RWMutex{}
 )
 
 type SearchResult struct {
@@ -371,4 +383,10 @@ type Images struct {
 type Column struct {
 	Header string
 	Value  string
+}
+
+type SearchAnalysis struct {
+	Ors  map[uint]string
+	Ands []string
+	Nots []string
 }

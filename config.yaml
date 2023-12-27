@@ -1,25 +1,25 @@
 ---
 database: "database/stargate"
-buffer: 369
-limit: 369
+buffer: 1107
+limit: 1107
 directories-limiter: 41
 pages-limiter: 1107
 directory-buffer: 1107
-site-title: IDOREAD.com
+site-title: DEV - I Do Read
 enable-cors: false
 enable-csp: false
 unsecure-port: 8080
 secure-port: 8443
 auto-tls: true
 tls-company: Project Apario LLC
-tls-domain-name: projectapario.com
+tls-domain-name: dev.idoread.com
 tls-san-ip: 127.0.0.1
-tls-additional-domains: idoread.com
-csp-domains-csv: localhost:8080
+tls-additional-domains: local.projectapario.com,idoread.com,dev.idoread.com,local.idoread.com
+csp-domains-csv: my.projectapario.com:8080,localhost:8080,my.projectapario.com:8443,localhost:8443
 company-name: Project Apario LLC
 primary-domain: idoread.com
-cookie-domain: localhost:8080
+cookie-domain: dev.idoread.com
 search-concurrency-buffer: 91604
 search-concurrency-limiter: 91604
 search-timeout-seconds: 30
-concurrent-searches: 1
+concurrent-searches: 30

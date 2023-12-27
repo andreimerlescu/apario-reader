@@ -19,10 +19,9 @@
         &middot;
         <a href="/contact" title="Contact {{ .company }}" target="_blank">Contact Us</a>
         &middot;
-        {{ if eq .dark_mode "0" }}
-        <a href="/dark" title="Enable Dark Mode">Dark Mode</a>
-        {{ else }}
-        <a href="/light" title="Enable Light Mode">Light Mode</a>
-        {{ end }}
+        <a href="/dark" title="Enable Dark Mode" class='{{ if eq .is_dark_mode "1" }}fw-bolder{{else}}fw-light{{end}}'>Dark</a>
+        &#47;
+        <a href="/light" title="Enable Light Mode" class='{{ if eq .is_dark_mode "0" }}fw-bolder{{else}}fw-light{{end}}'>Light</a>
+        Mode
     </p>
 </div>
