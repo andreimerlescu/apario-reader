@@ -42,6 +42,8 @@ func r_get_documents(c *gin.Context) {
 	for i := start_index; i < end_index; i++ {
 		if len(m_index_document_identifier[int64(i)]) > 0 {
 			page_identifiers = append(page_identifiers, m_index_document_identifier[int64(i)])
+		} else {
+			end_index++
 		}
 	}
 

@@ -102,6 +102,9 @@ var (
 	m_document_identifier_directory  = make(map[string]string) // map[DocumentIdentifier]checksum inside *flag_s_database
 	mu_document_identifier_directory = sync.RWMutex{}
 
+	m_document_identifier_cover_page_identifier  = make(map[string]string) // map[DocumentIdentifier]PageIdentifier
+	mu_document_identifier_cover_page_identifier = sync.RWMutex{}
+
 	// TODO: maybe i should switch this to map[GemScore.English]map[word]map[PageIdentifier]struct{}
 	m_page_gematria_english  = make(map[uint]map[string]map[string]struct{}) // map[GemScore.English]map[PageIdentifier]map[word]struct{}
 	mu_page_gematria_english = sync.RWMutex{}

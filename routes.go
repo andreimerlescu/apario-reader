@@ -5,6 +5,7 @@ import (
 	`html/template`
 	`log`
 	`net/http`
+	`strconv`
 	`strings`
 
 	`github.com/gin-gonic/gin`
@@ -42,4 +43,16 @@ func r_get_index(c *gin.Context) {
 	}
 	c.Header("Content-Type", "text/html; charset=UTF-8")
 	c.String(http.StatusOK, body)
+}
+
+func r_get_dark(c *gin.Context) {
+	c.SetCookie(*flag_s_dark_mode_cookie, strconv.Itoa(1), 31881600, "/", *flag_s_cookie_domain, false, true)
+	c.SetCookie(*flag_s_dark_mode_cookie, strconv.Itoa(1), 31881600, "/", *flag_s_cookie_domain, true, true)
+	c.Redirect(http.StatusTemporaryRedirect, "/")
+}
+
+func r_get_light(c *gin.Context) {
+	c.SetCookie(*flag_s_dark_mode_cookie, strconv.Itoa(0), 31881600, "/", *flag_s_cookie_domain, false, true)
+	c.SetCookie(*flag_s_dark_mode_cookie, strconv.Itoa(0), 31881600, "/", *flag_s_cookie_domain, true, true)
+	c.Redirect(http.StatusTemporaryRedirect, "/")
 }

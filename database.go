@@ -113,6 +113,12 @@ func analyze_document_directory(path string) {
 		return
 	}
 
+	if len(record.Identifier) == 0 {
+		log.Printf("skipping over path %v due to record.Identifier being 0 bytes", path)
+		log.Printf("-> skipped record = %v", record)
+		return
+	}
+
 	var total_pages uint
 	if record.TotalPages > 0 {
 		total_pages = uint(record.TotalPages)
@@ -240,6 +246,17 @@ func analyze_page(record_identifier string, path string, i uint) {
 
 	ocr := string(ocr_bytes)
 	gematria := NewGemScore(ocr)
+
+	if page_data.PageNumber == 1 {
+		mu_document_identifier_cover_page_identifier.RLock()
+		_, document_identifier_cover_page_identifier_defined := m_document_identifier_cover_page_identifier[record_identifier]
+		mu_document_identifier_cover_page_identifier.RUnlock()
+		if !document_identifier_cover_page_identifier_defined {
+			mu_document_identifier_cover_page_identifier.Lock()
+			m_document_identifier_cover_page_identifier[record_identifier] = page_data.Identifier
+			mu_document_identifier_cover_page_identifier.Unlock()
+		}
+	}
 
 	mu_document_page_identifiers_pgno.RLock()
 	_, document_page_identifiers_pgno_defined := m_document_page_identifiers_pgno[record_identifier][page_data.Identifier]

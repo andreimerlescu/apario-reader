@@ -12,40 +12,62 @@
             <p class="lead mb-4">All Documents</p>
             <div class="row row-cols-1 row-cols-sm-2 row-cols-md-4 g-4">
                 {{ range .page_identifiers }}
-                <div class="col">
-                    <div class="card text-center mb-3">
-                        <div class="card-body">
-                            <h5 class="card-title">{{ . }}</h5>
-                            <p class="card-text">{{ . }}</p>
-                            <a href="#" class="btn btn-primary">{{ . }}</a>
-                        </div>
-                    </div>
-                </div>
+                    {{ render_page_card . }}
                 {{ end }}
             </div>
             <div class="btn-group" role="group" aria-label="Pagination">
-                <a href="?page=1&limit={{ .limit }}" class="btn btn-outline-primary {{ if eq .i_page 1 }}disabled{{ end }}">First</a>
-                <a href="?page={{minus .i_page 1}}&limit={{ .limit }}" class="btn btn-outline-primary {{ if eq .i_page 1 }}disabled{{ end }}">Previous</a>
+                <!-- First and Previous -->
+                <a href="?page=1&limit={{ .i_limit }}" class="btn btn-outline-primary {{ if eq .i_page 1 }}disabled{{ end }}">First</a>
+                <a href="?page={{ minus .i_page 1 }}&limit={{ .i_limit }}" class="btn btn-outline-primary {{ if eq .i_page 1 }}disabled{{ end }}">Previous</a>
 
-                {{ if gt (.i_page | minus 3) 2 }}
+                {{ if gt (minus .i_page 3) 1 }}
                 <span class="btn btn-outline-primary disabled">...</span>
                 {{ end }}
 
-                {{ $currentPage := .i_page }}
-                {{ $totalPages := .i_total_pages }}
-                {{ range $i := .i_page | minus 3 | max 1 | sequence ( .i_page | plus 3 | min .i_total_pages ) }}
-                <a href="?page={{$i}}&limit={{ .limit }}" class="btn btn-outline-primary {{ if eq $currentPage $i }}disabled{{ end }}">{{ $i }}</a>
+                {{ $outer := . }}
+                {{ range $i := sequence (max 1 (minus .i_page 3)) (min .i_total_pages (plus .i_page 3)) }}
+                <a href="?page={{ $i }}&limit={{ $outer.i_limit }}" class="btn btn-outline-primary {{ if eq $outer.i_page $i }}disabled{{ end }}">{{ $i }}</a>
                 {{ end }}
 
-                {{ if lt (.i_page | plus 3) (.i_total_pages | minus 1) }}
+                {{ if lt (plus .i_page 3) .i_total_pages }}
                 <span class="btn btn-outline-primary disabled">...</span>
                 {{ end }}
 
-                <a href="?page={{plus .i_page 1}}&limit={{ .i_limit }}" class="btn btn-outline-primary {{ if eq .i_page .i_total_pages }}disabled{{ end }}">Next</a>
-                <a href="?page={{.i_total_pages}}&limit={{ .i_limit }}" class="btn btn-outline-primary {{ if eq .i_page .i_total_pages }}disabled{{ end }}">Last</a>
+                <a href="?page={{ plus .i_page 1 }}&limit={{ .i_limit }}" class="btn btn-outline-primary {{ if eq .i_page .i_total_pages }}disabled{{ end }}">Next</a>
+                <a href="?page={{ .i_total_pages }}&limit={{ .i_limit }}" class="btn btn-outline-primary {{ if eq .i_page .i_total_pages }}disabled{{ end }}">Last</a>
             </div>
+
+
             <div class="mt-2">
-                Page {{ .page }} of {{ .total_pages }} / Total Documents: {{ .total_documents }}
+                Page {{ .page }} of {{ .total_pages }}
+                &dash;
+                <a href="?page={{ .i_page }}&limit=12" class="{{ if eq .i_limit 12 }}fw-bolder{{else}}fw-light{{end}}" title="12 Documents Per Page">12</a>
+                &#47;
+                <a href="?page={{ .i_page }}&limit=17"  class="{{ if eq .i_limit 17 }}fw-bolder{{else}}fw-light{{end}}" title="17 Documents Per Page">17</a>
+                &#47;
+                <a href="?page={{ .i_page }}&limit=33"  class="{{ if eq .i_limit 33 }}fw-bolder{{else}}fw-light{{end}}" title="33 Documents Per Page">33</a>
+                &#47;
+                <a href="?page={{ .i_page }}&limit=45"  class="{{ if eq .i_limit 45 }}fw-bolder{{else}}fw-light{{end}}" title="45 Documents Per Page">45</a>
+                &#47;
+                <a href="?page={{ .i_page }}&limit=47"  class="{{ if eq .i_limit 47 }}fw-bolder{{else}}fw-light{{end}}" title="47 Documents Per Page">47</a>
+                &#47;
+                <a href="?page={{ .i_page }}&limit=63"  class="{{ if eq .i_limit 63 }}fw-bolder{{else}}fw-light{{end}}" title="63 Documents Per Page">63</a>
+                &#47;
+                <a href="?page={{ .i_page }}&limit=72"  class="{{ if eq .i_limit 72 }}fw-bolder{{else}}fw-light{{end}}" title="72 Documents Per Page">72</a>
+                &#47;
+                <a href="?page={{ .i_page }}&limit=144"  class="{{ if eq .i_limit 144 }}fw-bolder{{else}}fw-light{{end}}" title="144 Documents Per Page">144</a>
+                &#47;
+                <a href="?page={{ .i_page }}&limit=170"  class="{{ if eq .i_limit 170 }}fw-bolder{{else}}fw-light{{end}}" title="170 Documents Per Page">170</a>
+                &#47;
+                <a href="?page={{ .i_page }}&limit=369"  class="{{ if eq .i_limit 369 }}fw-bolder{{else}}fw-light{{end}}" title="369 Documents Per Page">369</a>
+                &#47;
+                <a href="?page={{ .i_page }}&limit=434"  class="{{ if eq .i_limit 434 }}fw-bolder{{else}}fw-light{{end}}" title="434 Documents Per Page">434</a>
+                &#47;
+                <a href="?page={{ .i_page }}&limit=666"  class="{{ if eq .i_limit 666 }}fw-bolder{{else}}fw-light{{end}}" title="666 Documents Per Page">666</a>
+                &#47;
+                <a href="?page={{ .i_page }}&limit=777"  class="{{ if eq .i_limit 777 }}fw-bolder{{else}}fw-light{{end}}" title="777 Documents Per Page">777</a>
+                &dash;
+                Total Documents: {{ .total_documents }}
             </div>
         </div>
         {{ render_partial "footer" .dark_mode }}

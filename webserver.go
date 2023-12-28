@@ -29,13 +29,15 @@ func NewWebServer(ctx context.Context) {
 		}()
 
 		gin_func_map = template.FuncMap{
-			"render_partial": render_partial_template,
-			"plus":           f_i_plus,
-			"minus":          f_i_minus,
-			"random_int":     f_i_random_int,
-			"sequence":       f_i_sequence,
-			"max":            f_i_max,
-			"min":            f_i_min,
+			"render_partial":     render_partial_template,
+			"render_page_card":   render_page_card,
+			"render_page_detail": render_page_detail,
+			"plus":               f_i_plus,
+			"minus":              f_i_minus,
+			"random_int":         f_i_random_int,
+			"sequence":           f_i_sequence,
+			"max":                f_i_max,
+			"min":                f_i_min,
 		}
 		default_gin_func_vars = gin.H{
 			"company": *flag_s_site_company,
@@ -108,16 +110,14 @@ func NewWebServer(ctx context.Context) {
 		}
 
 		// Serve all static assets using this entry point
-		r.GET("/assets/:directory/:filename", tollbooth_gin.LimitHandler(assetRateLimiter), getAsset)
+		r.GET("/assets/:directory/:filename", tollbooth_gin.LimitHandler(assetRateLimiter), r_get_asset)
+		r.GET("/covers/:document_identifier-:page_identifier.:size.jpg", tollbooth_gin.LimitHandler(assetRateLimiter), r_get_database_page_image)
 
-		// Go Web Server Index Path
+		// Routes
 		r.GET("/", r_get_index)
-
-		// Web App Routes
 		r.GET("/search", r_get_search)
-
+		r.GET("/search-results", r_get_search_results)
 		r.GET("/waiting-room", gin_get_waiting_room)
-
 		r.GET("/legal/community-standards", r_get_legal_community_standards)
 		r.GET("/legal/coppa", r_get_legal_coppa)
 		r.GET("/legal/gdpr", r_get_legal_gdpr)
@@ -133,19 +133,8 @@ func NewWebServer(ctx context.Context) {
 		r.GET("/words", r_get_words)
 		r.GET("/word/:word", r_get_word)
 		r.GET("/stumbleinto", r_get_stumble_into)
-		r.GET("/search-results", r_get_search_results)
-
-		r.GET("/dark", func(c *gin.Context) {
-			c.SetCookie(*flag_s_dark_mode_cookie, strconv.Itoa(1), 31881600, "/", *flag_s_cookie_domain, false, true)
-			c.SetCookie(*flag_s_dark_mode_cookie, strconv.Itoa(1), 31881600, "/", *flag_s_cookie_domain, true, true)
-			c.Redirect(http.StatusTemporaryRedirect, "/")
-		})
-
-		r.GET("/light", func(c *gin.Context) {
-			c.SetCookie(*flag_s_dark_mode_cookie, strconv.Itoa(0), 31881600, "/", *flag_s_cookie_domain, false, true)
-			c.SetCookie(*flag_s_dark_mode_cookie, strconv.Itoa(0), 31881600, "/", *flag_s_cookie_domain, true, true)
-			c.Redirect(http.StatusTemporaryRedirect, "/")
-		})
+		r.GET("/dark", r_get_dark)
+		r.GET("/light", r_get_light)
 
 		// Start HTTP Server
 		go func(r *gin.Engine) {

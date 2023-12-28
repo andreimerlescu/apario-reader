@@ -79,3 +79,62 @@ func compile_partial_template(path string, dark_mode string) (template.HTML, err
 	}
 	return template.HTML(htmlBuilder.String()), nil
 }
+
+func render_page_card(identifier string, dark_mode string) template.HTML {
+	body, err := compile_page_card(identifier, dark_mode)
+	if err != nil {
+		return template.HTML("Error: " + err.Error())
+	}
+	return body
+}
+
+func compile_page_card(identifier string, dark_mode string) (template.HTML, error) {
+	filename := "bundled/assets/components/page-card.html"
+	data, bundle_err := bundled_files.ReadFile(filename)
+	if bundle_err != nil {
+		return "", fmt.Errorf("failed to load %v due to err %v", filename, bundle_err)
+	}
+
+	path := fmt.Sprintf("page-%v", identifier)
+
+	tmpl := template.Must(template.New(path).Funcs(gin_func_map).Parse(string(data)))
+
+	mu_gin_func_vars.RLock()
+	existing_vars, have_vars := gin_func_vars[path]
+	mu_gin_func_vars.RUnlock()
+	if !have_vars || len(existing_vars) == 0 {
+		existing_vars = gin.H{
+			"title":        *flag_s_site_title,
+			"company":      *flag_s_site_company,
+			"domain":       *flag_s_primary_domain,
+			"is_dark_mode": dark_mode,
+		}
+	}
+
+	existing_vars["is_dark_mode"] = dark_mode // override with argument value
+	existing_vars["identifier"] = identifier
+
+	var htmlBuilder strings.Builder
+
+	mu_gin_func_vars.RLock()
+	template_err := tmpl.Execute(&htmlBuilder, existing_vars)
+	mu_gin_func_vars.RUnlock()
+
+	if template_err != nil {
+		return "", fmt.Errorf("error executing template: %v", template_err)
+	}
+	return template.HTML(htmlBuilder.String()), nil
+}
+
+func render_page_detail(identifier string, dark_mode string) template.HTML {
+	body, err := compile_page_card(identifier, dark_mode)
+	if err != nil {
+		return template.HTML("Error: " + err.Error())
+	}
+	return body
+}
+
+func compile_page_detail(identifier string, dark_mode string) (template.HTML, error) {
+
+	return template.HTML(""), nil
+}

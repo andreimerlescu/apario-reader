@@ -3,14 +3,16 @@ package main
 import (
 	`bytes`
 	`fmt`
+	`log`
 	`net/http`
+	`os`
 	`strings`
 	`time`
 
 	`github.com/gin-gonic/gin`
 )
 
-func getIcon(c *gin.Context) {
+func r_get_icon(c *gin.Context) {
 	name := c.Param("name")
 
 	filePath := fmt.Sprintf("bundled/assets/icons/%v", name)
@@ -47,7 +49,7 @@ func getIcon(c *gin.Context) {
 	http.ServeContent(c.Writer, c.Request, "", modTime, bytes.NewReader(fileData))
 }
 
-func getAsset(c *gin.Context) {
+func r_get_asset(c *gin.Context) {
 	directory := c.Param("directory")
 	filename := c.Param("filename")
 	filePath := fmt.Sprintf("bundled/assets/%v/%v", directory, filename)
@@ -97,4 +99,35 @@ func getAsset(c *gin.Context) {
 	}
 
 	http.ServeContent(c.Writer, c.Request, "", time.Now(), bytes.NewReader(fileData))
+}
+
+func r_get_database_page_image(c *gin.Context) {
+	directory := *flag_s_database
+	if len(directory) == 0 {
+		c.String(http.StatusNotFound, fmt.Sprintf("failed to load database %v", directory))
+		return
+	}
+
+	resolvedPath, symlink_err := resolve_symlink(directory)
+	if symlink_err != nil {
+		c.String(http.StatusInternalServerError, fmt.Sprintf("failed to load %v", directory))
+		return
+	}
+	directory = resolvedPath
+	log.Printf("using directory %v", directory)
+
+	document_identifier := c.Param("record_identifier")
+	page_identifier := c.Param("page_identifier")
+	size := c.Param("size")
+
+	document_directory, is_found := m_document_identifier_directory[document_identifier]
+	if !is_found {
+		c.String(http.StatusInternalServerError, "failed to find %v-%v.%v.jpg", document_identifier, page_identifier, size)
+		return
+	}
+
+	image_path := fmt.Sprintf("%v/pages/", page_identifier)
+
+	bytes, file_err := os.ReadFile(image_path)
+
 }
