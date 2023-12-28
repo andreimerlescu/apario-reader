@@ -2,7 +2,7 @@
 database: "database/stargate"
 buffer: 3301
 limit: 3301
-directories-limiter: 3301
+directories-limiter: 369
 pages-limiter: 3301
 directory-buffer: 3301
 site-title: DEV - I Do Read

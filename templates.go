@@ -114,6 +114,39 @@ func compile_page_card(identifier string, dark_mode string) (template.HTML, erro
 	existing_vars["is_dark_mode"] = dark_mode // override with argument value
 	existing_vars["identifier"] = identifier
 
+	mu_page_identifier_document.RLock()
+	document_identifier := m_page_identifier_document[identifier]
+	mu_page_identifier_document.RUnlock()
+	existing_vars["document_identifier"] = document_identifier
+
+	mu_page_identifier_page_number.RLock()
+	page_number := m_page_identifier_page_number[identifier]
+	mu_page_identifier_page_number.RUnlock()
+	existing_vars["page_number"] = page_number
+
+	mu_document_total_pages.RLock()
+	total_pages := m_document_total_pages[document_identifier]
+	mu_document_total_pages.RUnlock()
+	existing_vars["total_pages"] = total_pages
+
+	mu_document_source_url.RLock()
+	source_url := m_document_source_url[document_identifier]
+	mu_document_source_url.RUnlock()
+	existing_vars["url"] = source_url
+
+	mu_document_metadata.RLock()
+	metadata := m_document_metadata[document_identifier]
+	mu_document_metadata.RUnlock()
+	for key, value := range metadata {
+		existing_vars["meta_"+key] = value
+	}
+
+	existing_vars["cover_small"] = fmt.Sprintf("/covers/%v/%v/small.jpg", document_identifier, identifier)
+	existing_vars["cover_medium"] = fmt.Sprintf("/covers/%v/%v/medium.jpg", document_identifier, identifier)
+	existing_vars["cover_large"] = fmt.Sprintf("/covers/%v/%v/large.jpg", document_identifier, identifier)
+	existing_vars["cover_original"] = fmt.Sprintf("/covers/%v/%v/original.jpg", document_identifier, identifier)
+	existing_vars["cover_social"] = fmt.Sprintf("/covers/%v/%v/social.jpg", document_identifier, identifier)
+
 	var htmlBuilder strings.Builder
 
 	mu_gin_func_vars.RLock()

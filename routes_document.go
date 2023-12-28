@@ -7,6 +7,7 @@ import (
 	`net/http`
 	`strconv`
 	`strings`
+	`sync/atomic`
 
 	`github.com/gin-gonic/gin`
 )
@@ -39,11 +40,19 @@ func r_get_documents(c *gin.Context) {
 	end_index := start_index + limit
 
 	var page_identifiers []string
+	var increased_index_by atomic.Int64
 	for i := start_index; i < end_index; i++ {
 		if len(m_index_document_identifier[int64(i)]) > 0 {
-			page_identifiers = append(page_identifiers, m_index_document_identifier[int64(i)])
+			document_identifier := m_index_document_identifier[int64(i)]
+			mu_document_identifier_cover_page_identifier.RLock()
+			cover_page_identifier := m_document_identifier_cover_page_identifier[document_identifier]
+			mu_document_identifier_cover_page_identifier.RUnlock()
+			page_identifiers = append(page_identifiers, cover_page_identifier)
 		} else {
-			end_index++
+			total_increases := increased_index_by.Add(1)
+			if total_increases < 3 {
+				end_index++
+			}
 		}
 	}
 

@@ -159,6 +159,33 @@ func analyze_document_directory(path string) {
 		mu_document_identifier_directory.Unlock()
 	}
 
+	mu_document_total_pages.RLock()
+	_, document_total_pages_defined := m_document_total_pages[record.Identifier]
+	mu_document_total_pages.RUnlock()
+	if !document_total_pages_defined {
+		mu_document_total_pages.Lock()
+		m_document_total_pages[record.Identifier] = total_pages
+		mu_document_total_pages.Unlock()
+	}
+
+	mu_document_source_url.RLock()
+	_, document_source_url_defined := m_document_source_url[record.Identifier]
+	mu_document_source_url.RUnlock()
+	if !document_source_url_defined {
+		mu_document_source_url.Lock()
+		m_document_source_url[record.Identifier] = record.URL
+		mu_document_source_url.Unlock()
+	}
+
+	mu_document_metadata.RLock()
+	_, document_metadata_defined := m_document_metadata[record.Identifier]
+	mu_document_metadata.RUnlock()
+	if !document_metadata_defined {
+		mu_document_metadata.Lock()
+		m_document_metadata[record.Identifier] = record.Metadata
+		mu_document_metadata.Unlock()
+	}
+
 	mu_collection_documents.RLock()
 	_, documents_defined := m_collection_documents[collection_name]
 	mu_collection_documents.RUnlock()

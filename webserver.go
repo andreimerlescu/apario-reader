@@ -111,7 +111,7 @@ func NewWebServer(ctx context.Context) {
 
 		// Serve all static assets using this entry point
 		r.GET("/assets/:directory/:filename", tollbooth_gin.LimitHandler(assetRateLimiter), r_get_asset)
-		r.GET("/covers/:document_identifier-:page_identifier.:size.jpg", tollbooth_gin.LimitHandler(assetRateLimiter), r_get_database_page_image)
+		r.GET("/covers/:document_identifier/:page_identifier/:size", tollbooth_gin.LimitHandler(assetRateLimiter), r_get_database_page_image)
 
 		// Routes
 		r.GET("/", r_get_index)

@@ -1,9 +1,14 @@
 <div class="col">
     <div class="card text-center mb-3">
+        <img src="{{ .cover_medium }}" class="card-img-top" alt="{{ .meta_record_number }} - {{ .meta_title }}">
         <div class="card-body">
-            <h5 class="card-title">{{ .identifier }}</h5>
-            <p class="card-text">{{ .identifier }}</p>
-            <a href="#" class="btn btn-primary">{{ .identifier }}</a>
+            <h5 class="card-title">{{ .meta_record_number }}</h5>
+            <p class="card-text">{{ .meta_title }}</p>
+            <div class="btn-group">
+                <a href="/document/{{.document_identifier}}" class="btn btn-sm">Full Document</a>
+                <a href="/page/{{.identifier}}" class="btn btn-sm btn-primary">Read Page</a>
+                <a href="{{.url}}" target="_blank" class="btn btn-sm">.gov Source &#8599;</a>
+            </div>
         </div>
     </div>
 </div>

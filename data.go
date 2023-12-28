@@ -93,6 +93,15 @@ var (
 	m_page_identifier_page_number  = make(map[string]uint) // map[PageIdentifier]PageNumber
 	mu_page_identifier_page_number = sync.RWMutex{}
 
+	m_document_total_pages  = make(map[string]uint) // map[DocumentIdentifier]TotalPages
+	mu_document_total_pages = sync.RWMutex{}
+
+	m_document_source_url  = make(map[string]string) // map[DocumentIdentifier]URL
+	mu_document_source_url = sync.RWMutex{}
+
+	m_document_metadata  = make(map[string]map[string]string) // map[DocumentIdentifier]map[Key]Value
+	mu_document_metadata = sync.RWMutex{}
+
 	m_index_page_identifier  = make(map[int64]string) // map[Index]PageIdentifier
 	mu_index_page_identifier = sync.RWMutex{}
 
@@ -253,6 +262,10 @@ var (
 	a_i_total_documents   = atomic.Int64{}
 	a_i_total_pages       = atomic.Int64{}
 	a_i_waiting_room      = atomic.Int64{}
+
+	// Regular Expressions
+	reg_identifier = regexp.MustCompile("[^a-zA-Z0-9]+")
+	reg_image_size = regexp.MustCompile(`^[a-zA-Z0-9]+\.[a-zA-Z0-9]+$`)
 
 	// Semaphores
 	sem_db_directories      = sema.New(*flag_i_sem_directories)
