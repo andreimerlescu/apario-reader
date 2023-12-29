@@ -24,6 +24,7 @@ import (
 	"fmt"
 	`html/template`
 	"image/color"
+	`math`
 	`math/big`
 	"path/filepath"
 	`regexp`
@@ -254,6 +255,9 @@ var (
 	flag_b_session_store_redis_fallback_cookie          = config.NewBool("session-store-redis-fallback-cookie", false, "fall back to use cookies if and when redis is temporarily unavailable")
 	flag_s_session_store_cookie_secret                  = config.NewString("session-store-cookie-secret", "secure-password-369-goes-here", "a password to secure the cookies")
 	flag_s_session_store_redis_secret                   = config.NewString("session-store-redis-secret", "secure-password-369-goes-here", "a password to secure the redis sessions")
+	flag_i_concurrent_image_views                       = config.NewInt("concurrent-image-views", 369, "concurrent hits to /covers/<doc-id>/<pg-id>/<size>.jpg permitted")
+	flag_i_concurrent_asset_requests                    = config.NewInt("concurrent-asset-requests", 369, "concurrent hits to /assets/* permitted")
+	flag_i_concurrent_pdf_downloads                     = config.NewInt("concurrent-pdf-downloads", 369, "concurrent pdf downloads permitted")
 
 	// Atomics
 	a_b_gematria_loaded   = atomic.Bool{}
@@ -271,6 +275,9 @@ var (
 	sem_db_directories      = sema.New(*flag_i_sem_directories)
 	sem_analyze_pages       = sema.New(*flag_i_sem_pages)
 	sem_concurrent_searches = sema.New(*flag_i_concurrent_searches)
+	sem_image_views         = sema.New(*flag_i_concurrent_image_views)
+	sem_asset_requests      = sema.New(*flag_i_concurrent_asset_requests)
+	sem_pdf_downloads       = sema.New(*flag_i_concurrent_pdf_downloads)
 
 	// Channels
 	ch_db_directories       = sch.NewSmartChan(*flag_i_directory_buffer)
@@ -475,4 +482,43 @@ func f_i_min(a, b int) int {
 		return a
 	}
 	return b
+}
+
+const (
+	kilobyte = 1024
+	megabyte = 1024 * kilobyte
+	gigabyte = 1024 * megabyte
+	terabyte = 1024 * gigabyte
+	petabyte = 1024 * terabyte
+)
+
+func f_s_human_bytes(bytes int64, decimals int) string {
+	format := fmt.Sprintf("%%.%df %%s", decimals)
+
+	var result float64
+	var suffix string
+
+	switch {
+	case bytes < kilobyte:
+		return fmt.Sprintf(format, float64(bytes), "B")
+	case bytes < megabyte:
+		result = float64(bytes) / kilobyte
+		suffix = "KB"
+	case bytes < gigabyte:
+		result = float64(bytes) / megabyte
+		suffix = "MB"
+	case bytes < terabyte:
+		result = float64(bytes) / gigabyte
+		suffix = "GB"
+	case bytes < petabyte:
+		result = float64(bytes) / terabyte
+		suffix = "TB"
+	default:
+		result = float64(bytes) / petabyte
+		suffix = "PB"
+	}
+
+	result = math.Round(result*math.Pow(10, float64(decimals))) / math.Pow(10, float64(decimals))
+
+	return fmt.Sprintf(format, result, suffix)
 }

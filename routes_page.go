@@ -2,6 +2,7 @@ package main
 
 import (
 	`encoding/json`
+	`errors`
 	`fmt`
 	`html/template`
 	`log`
@@ -100,6 +101,25 @@ func r_get_page(c *gin.Context) {
 		return
 	}
 
+	document_pdf_path := filepath.Join(".", directory, document_directory_name, fmt.Sprintf("%v.pdf", template_vars["meta_record_number"]))
+	document_pdf_info, document_pdf_info_err := os.Stat(document_pdf_path)
+	if errors.Is(document_pdf_info_err, os.ErrNotExist) || errors.Is(document_pdf_info_err, os.ErrPermission) || document_pdf_info_err != nil {
+		log.Printf("failed to get the info about the document %v pdf path %v due to err %v", document_identifier, document_pdf_path, document_pdf_info_err)
+		c.String(http.StatusInternalServerError, "error executing template")
+		return
+	}
+
+	page_pdf_path := filepath.Join(".", directory, document_directory_name, "pages", fmt.Sprintf("%v_page_%d.pdf", template_vars["meta_record_number"], page_number))
+	page_pdf_info, page_pdf_info_err := os.Stat(page_pdf_path)
+	if errors.Is(page_pdf_info_err, os.ErrNotExist) || errors.Is(page_pdf_info_err, os.ErrPermission) || page_pdf_info_err != nil {
+		log.Printf("failed to get the info about the page %v pdf path %v due to err %v", page_identifier, page_pdf_path, page_pdf_info_err)
+		c.String(http.StatusInternalServerError, "error executing template")
+		return
+	}
+
+	template_vars["document_pdf_bytes"] = document_pdf_info.Size()
+	template_vars["page_pdf_bytes"] = page_pdf_info.Size()
+
 	page_data_path := filepath.Join(".", directory, document_directory_name, "pages", fmt.Sprintf("page.%06d.json", page_number))
 	page_data_bytes, page_data_err := os.ReadFile(page_data_path)
 	if page_data_err != nil {
@@ -124,6 +144,40 @@ func r_get_page(c *gin.Context) {
 
 	var htmlBuilder strings.Builder
 	if err := tmpl.Execute(&htmlBuilder, template_vars); err != nil {
+		c.String(http.StatusInternalServerError, "error executing template", err)
+		log.Println(err)
+		return
+	}
+	c.Header("Content-Type", "text/html; charset=UTF-8")
+	c.String(http.StatusOK, htmlBuilder.String())
+}
+
+func r_get_download_page(c *gin.Context) {
+	sem_pdf_downloads.Acquire()
+	defer sem_pdf_downloads.Release()
+	// TODO implement PDF downloads of a filename
+
+	data, err := bundled_files.ReadFile("bundled/assets/html/view-document.html")
+	if err != nil {
+		c.String(http.StatusInternalServerError, "Failed to load status.html")
+		return
+	}
+
+	tmpl := template.Must(template.New("view-document").Funcs(gin_func_map).Parse(string(data)))
+
+	var htmlBuilder strings.Builder
+	if err := tmpl.Execute(&htmlBuilder, gin.H{
+		"title":             fmt.Sprintf("%v - View Document", *flag_s_site_title),
+		"company":           *flag_s_site_company,
+		"domain":            *flag_s_primary_domain,
+		"active_searches":   human_int(int64(sem_concurrent_searches.Len())),
+		"i_active_searches": int64(sem_concurrent_searches.Len()),
+		"max_searches":      human_int(int64(*flag_i_concurrent_searches)),
+		"i_max_searches":    int64(*flag_i_concurrent_searches),
+		"in_waiting_room":   human_int(a_i_waiting_room.Load()),
+		"i_in_waiting_room": a_i_waiting_room.Load(),
+		"dark_mode":         gin_is_dark_mode(c),
+	}); err != nil {
 		c.String(http.StatusInternalServerError, "error executing template", err)
 		log.Println(err)
 		return

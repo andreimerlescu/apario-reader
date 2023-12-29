@@ -15,6 +15,9 @@ import (
 )
 
 func r_get_icon(c *gin.Context) {
+	sem_asset_requests.Acquire()
+	defer sem_asset_requests.Release()
+
 	name := c.Param("name")
 
 	filePath := fmt.Sprintf("bundled/assets/icons/%v", name)
@@ -52,6 +55,9 @@ func r_get_icon(c *gin.Context) {
 }
 
 func r_get_asset(c *gin.Context) {
+	sem_asset_requests.Acquire()
+	defer sem_asset_requests.Release()
+
 	directory := c.Param("directory")
 	filename := c.Param("filename")
 	filePath := fmt.Sprintf("bundled/assets/%v/%v", directory, filename)
@@ -104,6 +110,9 @@ func r_get_asset(c *gin.Context) {
 }
 
 func r_get_database_page_image(c *gin.Context) {
+	sem_image_views.Acquire()
+	defer sem_image_views.Release()
+
 	directory := *flag_s_database
 	if len(directory) == 0 {
 		c.String(http.StatusNotFound, fmt.Sprintf("failed to load database %v", directory))
@@ -188,5 +197,4 @@ func r_get_database_page_image(c *gin.Context) {
 
 	c.Header("Content-Type", "image/jpg")
 	http.ServeContent(c.Writer, c.Request, image_name, time.Now(), bytes.NewReader(file_bytes))
-
 }

@@ -24,9 +24,18 @@
                 <hr>
                 <table class="table">
                     <tr>
-                        <td><b>English</b>: {{ .gematria.English }}</td>
-                        <td><b>Jewish</b>: {{ .gematria.Jewish }}</td>
-                        <td><b>Simple</b>: {{ .gematria.Simple }}</td>
+                        <td>
+                            <b>English</b>:
+                            <a href="/gematria/english/{{ .gematria.English }}" title="Browse English Gematria {{ .gematria.English }}">{{ .gematria.English }}</a>
+                        </td>
+                        <td>
+                            <b>Jewish</b>:
+                            <a href="/gematria/jewish/{{ .gematria.Jewish }}" title="Browse Jewish Gematria {{ .gematria.Jewish }}">{{ .gematria.Jewish }}</a>
+                        </td>
+                        <td>
+                            <b>Simple</b>:
+                            <a href="/gematria/simple/{{ .gematria.Simple }}" title="Browse Simple Gematria {{ .gematria.Simple }}">{{ .gematria.Simple }}</a>
+                        </td>
                     </tr>
                 </table>
                 <h5 class="lead mt-4">Metadata</h5>
@@ -39,10 +48,27 @@
                         </tr>
                     </thead>
                     <tbody>
+                        {{ $outer := . }}
                         {{ range $key, $value := .metadata }}
                         <tr>
                             <th scope="row">{{ $key }}</th>
-                            <td>{{ $value }}</td>
+                            <td>
+                                {{ if eq $key "Source URL" }}
+                                    <a href="{{ $value }}" title="Access Source URL" target="_blank">{{ $value }}</a>
+                                {{ else if eq $key "record_number" }}
+                                    <a href="/download/document/{{ $outer.document_identifier }}/{{ $value }}.pdf" title="Download {{ $value }}.pdf" target="_blank">
+                                        Download Full OCR Document &#8599;
+                                        ( {{ human_bytes $outer.document_pdf_bytes 3 }} )
+                                    </a>
+                                    &middot;
+                                    <a href="/download/page/{{ $outer.page_identifier }}/{{ $value }}.pdf" title="Download Page {{ $outer.page_number }} of {{ $outer.document_pages }} - {{ $value }}.pdf" target="_blank">
+                                        Download Page {{ $outer.page_number }} PDF &#8599;
+                                        ( {{ human_bytes $outer.page_pdf_bytes 3 }} )
+                                    </a>
+                                {{ else }}
+                                    {{ $value }}
+                                {{ end }}
+                            </td>
                         </tr>
                         {{ end }}
                     </tbody>

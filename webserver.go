@@ -39,6 +39,7 @@ func NewWebServer(ctx context.Context) {
 			"sequence":             f_i_sequence,
 			"max":                  f_i_max,
 			"min":                  f_i_min,
+			"human_bytes":          f_s_human_bytes,
 		}
 		default_gin_func_vars = gin.H{
 			"company": *flag_s_site_company,
@@ -128,7 +129,8 @@ func NewWebServer(ctx context.Context) {
 		r.GET("/status", r_get_status)
 		r.GET("/documents", r_get_documents)
 		r.GET("/document/:identifier", r_get_view_document)
-		r.GET("/file/:filename", r_get_view_file)
+		r.GET("/download/document/:document_identifier/:filename", r_get_download_document)
+		r.GET("/download/page/:page_identifier/:filename", r_get_download_page)
 		r.GET("/gematria/:type/:number", r_get_gematria)
 		r.GET("/page/:identifier", r_get_page)
 		r.GET("/words", r_get_words)

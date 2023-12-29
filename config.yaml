@@ -23,3 +23,6 @@ search-concurrency-buffer: 91604
 search-concurrency-limiter: 91604
 search-timeout-seconds: 30
 concurrent-searches: 30
+concurrent-image-views: 1107
+concurrent-asset-requests: 1107
+concurrent-pdf-downloads: 369

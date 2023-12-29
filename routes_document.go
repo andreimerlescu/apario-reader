@@ -103,7 +103,7 @@ func r_get_view_document(c *gin.Context) {
 
 	var template_vars gin.H
 	template_vars = gin.H{
-		"title":     fmt.Sprintf("%v - View Document", *flag_s_site_title),
+		"title":     fmt.Sprintf("%v - View Document", *flag_s_site_title), // TODO add record_number and title from metadata here
 		"company":   *flag_s_site_company,
 		"domain":    *flag_s_primary_domain,
 		"dark_mode": gin_is_dark_mode(c),
@@ -161,7 +161,11 @@ func r_get_view_document(c *gin.Context) {
 	c.String(http.StatusOK, htmlBuilder.String())
 }
 
-func r_get_view_file(c *gin.Context) {
+func r_get_download_document(c *gin.Context) {
+	sem_pdf_downloads.Acquire()
+	defer sem_pdf_downloads.Release()
+	// TODO implement PDF downloads of a filename
+
 	data, err := bundled_files.ReadFile("bundled/assets/html/view-document.html")
 	if err != nil {
 		c.String(http.StatusInternalServerError, "Failed to load status.html")
