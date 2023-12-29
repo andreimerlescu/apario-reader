@@ -80,22 +80,33 @@ func compile_partial_template(path string, dark_mode string) (template.HTML, err
 	return template.HTML(htmlBuilder.String()), nil
 }
 
-func render_page_card(identifier string, dark_mode string) template.HTML {
-	body, err := compile_page_card(identifier, dark_mode)
+// render_document_card is used for all-documents showing the cover page of a document
+func render_document_card(cover_page_identifier string, dark_mode string) template.HTML {
+	body, err := compile_page_card(cover_page_identifier, dark_mode, "document")
 	if err != nil {
 		return template.HTML("Error: " + err.Error())
 	}
 	return body
 }
 
-func compile_page_card(identifier string, dark_mode string) (template.HTML, error) {
-	filename := "bundled/assets/components/page-card.html"
+// render_page_card is used when viewing a document's pages, this is the per-page card
+func render_page_card(page_identifier string, dark_mode string) template.HTML {
+	body, err := compile_page_card(page_identifier, dark_mode, "page")
+	if err != nil {
+		return template.HTML("Error: " + err.Error())
+	}
+	return body
+}
+
+// compile_page_card builds a template and returns the populated HTML parent_object controls the bundled/assets/component rendered
+func compile_page_card(page_identifier string, dark_mode string, parent_object string) (template.HTML, error) {
+	filename := fmt.Sprintf("bundled/assets/components/%v-card.html", parent_object)
 	data, bundle_err := bundled_files.ReadFile(filename)
 	if bundle_err != nil {
 		return "", fmt.Errorf("failed to load %v due to err %v", filename, bundle_err)
 	}
 
-	path := fmt.Sprintf("page-%v", identifier)
+	path := fmt.Sprintf("page-%v", page_identifier)
 
 	tmpl := template.Must(template.New(path).Funcs(gin_func_map).Parse(string(data)))
 
@@ -104,30 +115,29 @@ func compile_page_card(identifier string, dark_mode string) (template.HTML, erro
 	mu_gin_func_vars.RUnlock()
 	if !have_vars || len(existing_vars) == 0 {
 		existing_vars = gin.H{
-			"title":        *flag_s_site_title,
-			"company":      *flag_s_site_company,
-			"domain":       *flag_s_primary_domain,
-			"is_dark_mode": dark_mode,
+			"title":   *flag_s_site_title,
+			"company": *flag_s_site_company,
+			"domain":  *flag_s_primary_domain,
 		}
 	}
 
 	existing_vars["is_dark_mode"] = dark_mode // override with argument value
-	existing_vars["identifier"] = identifier
+	existing_vars["page_identifier"] = page_identifier
 
 	mu_page_identifier_document.RLock()
-	document_identifier := m_page_identifier_document[identifier]
+	document_identifier := m_page_identifier_document[page_identifier]
 	mu_page_identifier_document.RUnlock()
 	existing_vars["document_identifier"] = document_identifier
 
 	mu_page_identifier_page_number.RLock()
-	page_number := m_page_identifier_page_number[identifier]
+	page_number := m_page_identifier_page_number[page_identifier]
 	mu_page_identifier_page_number.RUnlock()
 	existing_vars["page_number"] = page_number
 
 	mu_document_total_pages.RLock()
 	total_pages := m_document_total_pages[document_identifier]
 	mu_document_total_pages.RUnlock()
-	existing_vars["total_pages"] = total_pages
+	existing_vars["document_pages"] = total_pages
 
 	mu_document_source_url.RLock()
 	source_url := m_document_source_url[document_identifier]
@@ -141,11 +151,11 @@ func compile_page_card(identifier string, dark_mode string) (template.HTML, erro
 		existing_vars["meta_"+key] = value
 	}
 
-	existing_vars["cover_small"] = fmt.Sprintf("/covers/%v/%v/small.jpg", document_identifier, identifier)
-	existing_vars["cover_medium"] = fmt.Sprintf("/covers/%v/%v/medium.jpg", document_identifier, identifier)
-	existing_vars["cover_large"] = fmt.Sprintf("/covers/%v/%v/large.jpg", document_identifier, identifier)
-	existing_vars["cover_original"] = fmt.Sprintf("/covers/%v/%v/original.jpg", document_identifier, identifier)
-	existing_vars["cover_social"] = fmt.Sprintf("/covers/%v/%v/social.jpg", document_identifier, identifier)
+	existing_vars["cover_small"] = fmt.Sprintf("/covers/%v/%v/small.jpg", document_identifier, page_identifier)
+	existing_vars["cover_medium"] = fmt.Sprintf("/covers/%v/%v/medium.jpg", document_identifier, page_identifier)
+	existing_vars["cover_large"] = fmt.Sprintf("/covers/%v/%v/large.jpg", document_identifier, page_identifier)
+	existing_vars["cover_original"] = fmt.Sprintf("/covers/%v/%v/original.jpg", document_identifier, page_identifier)
+	existing_vars["cover_social"] = fmt.Sprintf("/covers/%v/%v/social.jpg", document_identifier, page_identifier)
 
 	var htmlBuilder strings.Builder
 
@@ -160,7 +170,7 @@ func compile_page_card(identifier string, dark_mode string) (template.HTML, erro
 }
 
 func render_page_detail(identifier string, dark_mode string) template.HTML {
-	body, err := compile_page_card(identifier, dark_mode)
+	body, err := compile_page_detail(identifier, dark_mode)
 	if err != nil {
 		return template.HTML("Error: " + err.Error())
 	}

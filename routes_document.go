@@ -5,6 +5,7 @@ import (
 	`html/template`
 	`log`
 	`net/http`
+	`sort`
 	`strconv`
 	`strings`
 	`sync/atomic`
@@ -95,21 +96,63 @@ func r_get_view_document(c *gin.Context) {
 		return
 	}
 
+	document_identifier := c.Param("identifier")
+	document_identifier = reg_identifier.ReplaceAllString(document_identifier, "") // sanitize input
+
 	tmpl := template.Must(template.New("view-document").Funcs(gin_func_map).Parse(string(data)))
 
+	var template_vars gin.H
+	template_vars = gin.H{
+		"title":     fmt.Sprintf("%v - View Document", *flag_s_site_title),
+		"company":   *flag_s_site_company,
+		"domain":    *flag_s_primary_domain,
+		"dark_mode": gin_is_dark_mode(c),
+	}
+
+	mu_document_metadata.RLock()
+	metadata := m_document_metadata[document_identifier]
+	mu_document_metadata.RUnlock()
+	for key, value := range metadata {
+		template_vars["meta_"+key] = value
+	}
+
+	mu_document_total_pages.RLock()
+	total_pages := m_document_total_pages[document_identifier]
+	mu_document_total_pages.RUnlock()
+	template_vars["document_pages"] = total_pages
+
+	var pages map[string]uint // map[PageIdentifier]PageNumber
+	var has_pages bool
+	mu_document_page_identifiers_pgno.RLock()
+	pages, has_pages = m_document_page_identifiers_pgno[document_identifier]
+	mu_document_page_identifiers_pgno.RUnlock()
+	if !has_pages {
+		referrer := c.Request.Header.Get("Referer")
+		if referrer != "" {
+			c.Redirect(http.StatusFound, referrer)
+		} else {
+			c.Redirect(http.StatusFound, "/")
+		}
+		return
+	}
+
+	type page_data struct {
+		PageIdentifier string
+		PageNumber     uint
+	}
+	var s_page_data []page_data
+	for page_identifier, page_number := range pages {
+		s_page_data = append(s_page_data, page_data{page_identifier, page_number})
+	}
+
+	sort.Slice(s_page_data, func(left, right int) bool {
+		return s_page_data[left].PageNumber < s_page_data[right].PageNumber
+	})
+
+	template_vars["pages"] = s_page_data
+
 	var htmlBuilder strings.Builder
-	if err := tmpl.Execute(&htmlBuilder, gin.H{
-		"title":             fmt.Sprintf("%v - View Document", *flag_s_site_title),
-		"company":           *flag_s_site_company,
-		"domain":            *flag_s_primary_domain,
-		"active_searches":   human_int(int64(sem_concurrent_searches.Len())),
-		"i_active_searches": int64(sem_concurrent_searches.Len()),
-		"max_searches":      human_int(int64(*flag_i_concurrent_searches)),
-		"i_max_searches":    int64(*flag_i_concurrent_searches),
-		"in_waiting_room":   human_int(a_i_waiting_room.Load()),
-		"i_in_waiting_room": a_i_waiting_room.Load(),
-		"dark_mode":         gin_is_dark_mode(c),
-	}); err != nil {
+	if err := tmpl.Execute(&htmlBuilder, template_vars); err != nil {
 		c.String(http.StatusInternalServerError, "error executing template", err)
 		log.Println(err)
 		return

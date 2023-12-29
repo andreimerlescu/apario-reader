@@ -6,10 +6,21 @@
 </head>
 <body>
 <main>
-    <div class="px-4 py-5 my-5 text-center">
-        {{ render_partial "header" .dark_mode }}
-        <div class="col-lg-6 mx-auto">
-            <p class="lead mb-4">View A Document</p>
+    <div class="px-4 py-5 my-5">
+        <div class="text-center">
+            {{ render_partial "header" .dark_mode }}
+        </div>
+        <div class="container">
+            <p class="lead mb-4 text-center">
+                {{ .meta_title }}
+                <small>{{ .meta_record_number }} &middot; {{ .document_pages }} Page{{ if gt .document_pages 1 }}s{{end}}</small>
+            </p>
+            <div class="row row-cols-1 row-cols-sm-2 row-cols-md-4 g-4">
+                {{ $outer := . }}
+                {{ range .pages }}
+                    {{ render_page_card .PageIdentifier $outer.dark_mode }}
+                {{ end }}
+            </div>
         </div>
         {{ render_partial "footer" .dark_mode }}
     </div>

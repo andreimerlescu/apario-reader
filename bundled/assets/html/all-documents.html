@@ -9,14 +9,34 @@
     <div class="px-4 py-5 my-5 text-center">
         {{ render_partial "header" .dark_mode }}
         <div class="container">
-            <p class="lead mb-4">All Documents</p>
+            <div class="btn-group mb-4" role="group" aria-label="Pagination">
+                <!-- First and Previous -->
+                <a href="?page=1&limit={{ .i_limit }}" class="btn btn-outline-primary {{ if eq .i_page 1 }}disabled{{ end }}">First</a>
+                <a href="?page={{ minus .i_page 1 }}&limit={{ .i_limit }}" class="btn btn-outline-primary {{ if eq .i_page 1 }}disabled{{ end }}">Previous</a>
+
+                {{ if gt (minus .i_page 3) 1 }}
+                <span class="btn btn-outline-primary disabled">...</span>
+                {{ end }}
+
+                {{ $outer := . }}
+                {{ range $i := sequence (max 1 (minus .i_page 3)) (min .i_total_pages (plus .i_page 3)) }}
+                <a href="?page={{ $i }}&limit={{ $outer.i_limit }}" class="btn btn-outline-primary {{ if eq $outer.i_page $i }}disabled{{ end }}">{{ $i }}</a>
+                {{ end }}
+
+                {{ if lt (plus .i_page 3) .i_total_pages }}
+                <span class="btn btn-outline-primary disabled">...</span>
+                {{ end }}
+
+                <a href="?page={{ plus .i_page 1 }}&limit={{ .i_limit }}" class="btn btn-outline-primary {{ if eq .i_page .i_total_pages }}disabled{{ end }}">Next</a>
+                <a href="?page={{ .i_total_pages }}&limit={{ .i_limit }}" class="btn btn-outline-primary {{ if eq .i_page .i_total_pages }}disabled{{ end }}">Last</a>
+            </div>
             <div class="row row-cols-1 row-cols-sm-2 row-cols-md-4 g-4">
                 {{ $outer := . }}
                 {{ range .page_identifiers }}
-                    {{ render_page_card . $outer.dark_mode }}
+                    {{ render_document_card . $outer.dark_mode }}
                 {{ end }}
             </div>
-            <div class="btn-group" role="group" aria-label="Pagination">
+            <div class="btn-group my-2" role="group" aria-label="Pagination">
                 <!-- First and Previous -->
                 <a href="?page=1&limit={{ .i_limit }}" class="btn btn-outline-primary {{ if eq .i_page 1 }}disabled{{ end }}">First</a>
                 <a href="?page={{ minus .i_page 1 }}&limit={{ .i_limit }}" class="btn btn-outline-primary {{ if eq .i_page 1 }}disabled{{ end }}">Previous</a>

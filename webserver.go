@@ -29,15 +29,16 @@ func NewWebServer(ctx context.Context) {
 		}()
 
 		gin_func_map = template.FuncMap{
-			"render_partial":     render_partial_template,
-			"render_page_card":   render_page_card,
-			"render_page_detail": render_page_detail,
-			"plus":               f_i_plus,
-			"minus":              f_i_minus,
-			"random_int":         f_i_random_int,
-			"sequence":           f_i_sequence,
-			"max":                f_i_max,
-			"min":                f_i_min,
+			"render_partial":       render_partial_template,
+			"render_document_card": render_document_card,
+			"render_page_card":     render_page_card,
+			"render_page_detail":   render_page_detail,
+			"plus":                 f_i_plus,
+			"minus":                f_i_minus,
+			"random_int":           f_i_random_int,
+			"sequence":             f_i_sequence,
+			"max":                  f_i_max,
+			"min":                  f_i_min,
 		}
 		default_gin_func_vars = gin.H{
 			"company": *flag_s_site_company,

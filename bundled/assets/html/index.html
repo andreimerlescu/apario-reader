@@ -6,9 +6,11 @@
 </head>
 <body>
     <main>
-        <div class="px-4 py-5 my-5 text-center">
-            {{ render_partial "header" .dark_mode }}
-            <div class="col-lg-6 mx-auto">
+        <div class="px-4 py-5 my-5">
+            <div class="text-center">
+                {{ render_partial "header" .dark_mode }}
+            </div>
+            <div class="col-lg-6 mx-auto text-center">
                 <p class="lead mb-4">Research {{ .total_documents }} documents containing over {{ .total_pages }} pages.</p>
                 <div class="d-grid gap-2 d-sm-flex justify-content-sm-center">
                     <form class="form" action="/search" method="get">

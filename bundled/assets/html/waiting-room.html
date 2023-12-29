@@ -6,12 +6,20 @@
 </head>
 <body>
 <main>
-    <div class="px-4 py-5 my-5 text-center">
-        {{ render_partial "header" .dark_mode }}
+    <div class="px-4 py-5 my-5">
+        <div class="text-center">
+            {{ render_partial "header" .dark_mode }}
+        </div>
         <div class="col-lg-6 mx-auto">
             <h1>Waiting Room</h1>
             <p class="lead mb-4">There are currently {{ .active_searches }}/{{ .max_searches }} searching being performed.</p>
-            <p class="lead mb-4"><em>Please wait your turn. <br>We have {{ .in_waiting_room }} folk{{ if gt .i_in_waiting_room 1}}s{{end}} waiting alongside you.</em></p>
+            <p class="lead mb-4">
+                <em>
+                    Please wait your turn.
+                    <br>
+                    We have {{ .in_waiting_room }} folk{{ if gt .i_in_waiting_room 1}}s{{end}} waiting alongside you.
+                </em>
+            </p>
         </div>
         {{ render_partial "footer" .dark_mode }}
     </div>

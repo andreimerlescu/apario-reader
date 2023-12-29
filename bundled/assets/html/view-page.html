@@ -6,10 +6,49 @@
 </head>
 <body>
 <main>
-    <div class="px-4 py-5 my-5 text-center">
-        {{ render_partial "header" .dark_mode }}
-        <div class="col-lg-6 mx-auto">
-            <p class="lead mb-4">View Page in Document</p>
+    <div class="px-4 py-5 my-5">
+        <div class="text-center">
+            {{ render_partial "header" .dark_mode }}
+        </div>
+        <div class="row">
+            <div class="col-lg-6 col-sm-12 col-md-8">
+                <!-- page -->
+                <img src="{{.cover_large}}" class="lazyload img-fluid shadow-sm" alt="Page {{.page_number}} of {{.meta_record_number }}"/>
+            </div>
+            <div class="col-lg-6 col-sm-12 col-md-4">
+                <!-- sidebar -->
+                <h5 class="lead">Full Text</h5>
+                <hr>
+                {{ .full_text }}
+                <h5 class="lead mt-4">Gematria</h5>
+                <hr>
+                <table class="table">
+                    <tr>
+                        <td><b>English</b>: {{ .gematria.English }}</td>
+                        <td><b>Jewish</b>: {{ .gematria.Jewish }}</td>
+                        <td><b>Simple</b>: {{ .gematria.Simple }}</td>
+                    </tr>
+                </table>
+                <h5 class="lead mt-4">Metadata</h5>
+                <hr>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Property</th>
+                            <th scope="col">Value</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{ range $key, $value := .metadata }}
+                        <tr>
+                            <th scope="row">{{ $key }}</th>
+                            <td>{{ $value }}</td>
+                        </tr>
+                        {{ end }}
+                    </tbody>
+                </table>
+                <hr>
+            </div>
         </div>
         {{ render_partial "footer" .dark_mode }}
     </div>
