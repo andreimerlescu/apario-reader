@@ -10,15 +10,107 @@
         <div class="text-center">
             {{ render_partial "header" .dark_mode }}
         </div>
-        <div class="col-lg-6 mx-auto">
-            <p class="lead mb-4">Legal / Terms of Use</p>
-            <div class="d-grid gap-2 d-sm-flex justify-content-sm-center">
-                <ul>
-                    <li>This software cannot be used to perform or associate with illegal activities in YOUR local jurisdiction.</li>
-                    <li>The developers of this project are free of any liability as a consequence of using this software.</li>
-                    <li>You are expected to use this platform to conduct lawful research into public domain information.</li>
-                    <li>Abuse of the software could result in legal action taken against you.</li>
-                </ul>
+        {{ $outer := . }}
+        <div class="container">
+            <h1 class="text-center lead">
+                <span class="text-bg-primary badge mx-3">{{ .query }}</span>
+                Search Results
+                <span class="badge text-bg-{{ .inverse_dark_mode }} mx-3">{{ .s_total_matching_page_identifiers }} Pages</span>
+            </h1>
+            <p class="lead text-center">
+                <b>Gematria</b>:
+                <em>English</em>
+                <a href='/gematria/english/{{ .GemScore.English }}{{ if ne .from "" }}?from={{.from}}{{ end }}' title="Explore Gematria {{ .GemScore.English }}">
+                    {{ .GemScore.English }}
+                    (<attr title="{{ .gematria_pages.EnglishPages }} Pages">{{ .gematria_pages.EnglishPages }}</attr>)
+                </a>
+                &middot;
+                <em>Jewish</em>
+                <a href='/gematria/jewish/{{ .GemScore.Jewish }}{{ if ne .from "" }}?from={{.from}}{{ end }}' title="Explore Gematria {{ .GemScore.Jewish }}">
+                    {{ .GemScore.Jewish }}
+                    (<attr title="{{ .gematria_pages.JewishPages }} Pages">{{ .gematria_pages.JewishPages }}</attr>)
+                </a>
+                &middot;
+                <em>Simple</em>
+                <a href='/gematria/simple/{{ .GemScore.Simple }}{{ if ne .from "" }}?from={{.from}}{{ end }}' title="Explore Gematria {{ .GemScore.Simple }}">
+                    {{ .GemScore.Simple }}
+                    (<attr title="{{ .gematria_pages.SimplePages }} Pages">{{ .gematria_pages.SimplePages }}</attr>)
+                </a>
+            </p>
+            <div class="text-center">
+                <div class="btn-group mb-4" role="group" aria-label="Pagination">
+                    <a href='?page=1&limit={{ .i_limit }}{{ if ne .from "" }}?from={{.from}}{{ end }}' class="btn btn-outline-primary {{ if eq .i_page 1 }}disabled{{ end }}">First</a>
+                    <a href='?page={{ minus .i_page 1 }}&limit={{ .i_limit }}{{ if ne .from "" }}?from={{.from}}{{ end }}' class="btn btn-outline-primary {{ if eq .i_page 1 }}disabled{{ end }}">Previous</a>
+
+                    {{ if gt (minus .i_page 3) 1 }}
+                    <span class="btn btn-outline-primary disabled">...</span>
+                    {{ end }}
+
+                    {{ range $i := sequence (max 1 (minus .i_page 3)) (min .total_result_pages (plus .i_page 3)) }}
+                    <a href='?page={{ $i }}&limit={{ $outer.i_limit }}{{ if ne $outer.from "" }}?from={{ $outer.from }}{{ end }}' class="btn btn-outline-primary {{ if eq $outer.i_page $i }}disabled{{ end }}">{{ $i }}</a>
+                    {{ end }}
+
+                    {{ if lt (plus .i_page 3) .total_result_pages }}
+                    <span class="btn btn-outline-primary disabled">...</span>
+                    {{ end }}
+
+                    <a href='?page={{ plus .i_page 1 }}&limit={{ .i_limit }}{{ if ne .from "" }}?from={{.from}}{{ end }}' class="btn btn-outline-primary {{ if eq .i_page .total_result_pages }}disabled{{ end }}">Next</a>
+                    <a href='?page={{ .total_result_pages }}&limit={{ .i_limit }}{{ if ne .from "" }}?from={{.from}}{{ end }}' class="btn btn-outline-primary {{ if eq .i_page .total_result_pages }}disabled{{ end }}">Last</a>
+                </div>
+            </div>
+
+            <div class="row row-cols-1 row-cols-sm-2 row-cols-md-4 g-4">
+                {{ range .result_page_identifiers }}
+                    {{ if eq $outer.from "" }}
+                        {{ render_page_card . $outer.dark_mode }}
+                    {{ else }}
+                        {{ render_page_card_from . $outer.dark_mode $outer.from }}
+                    {{ end }}
+                {{ end }}
+            </div>
+
+            <div class="text-center">
+                <div class="btn-group mb-4" role="group" aria-label="Pagination">
+                    <a href='?page=1&limit={{ .i_limit }}{{ if ne .from "" }}?from={{.from}}{{ end }}' class="btn btn-outline-primary {{ if eq .i_page 1 }}disabled{{ end }}">First</a>
+                    <a href='?page={{ minus .i_page 1 }}&limit={{ .i_limit }}{{ if ne .from "" }}?from={{.from}}{{ end }}' class="btn btn-outline-primary {{ if eq .i_page 1 }}disabled{{ end }}">Previous</a>
+
+                    {{ if gt (minus .i_page 3) 1 }}
+                    <span class="btn btn-outline-primary disabled">...</span>
+                    {{ end }}
+
+                    {{ range $i := sequence (max 1 (minus .i_page 3)) (min .total_result_pages (plus .i_page 3)) }}
+                    <a href='?page={{ $i }}&limit={{ $outer.i_limit }}{{ if ne $outer.from "" }}?from={{ $outer.from }}{{ end }}' class="btn btn-outline-primary {{ if eq $outer.i_page $i }}disabled{{ end }}">{{ $i }}</a>
+                    {{ end }}
+
+                    {{ if lt (plus .i_page 3) .total_result_pages }}
+                    <span class="btn btn-outline-primary disabled">...</span>
+                    {{ end }}
+
+                    <a href='?page={{ plus .i_page 1 }}&limit={{ .i_limit }}{{ if ne .from "" }}?from={{.from}}{{ end }}' class="btn btn-outline-primary {{ if eq .i_page .total_result_pages }}disabled{{ end }}">Next</a>
+                    <a href='?page={{ .total_result_pages }}&limit={{ .i_limit }}{{ if ne .from "" }}?from={{.from}}{{ end }}' class="btn btn-outline-primary {{ if eq .i_page .total_result_pages }}disabled{{ end }}">Last</a>
+                </div>
+            </div>
+
+            <div class="mt-2 text-center">
+                Page {{ .s_page }} of {{ .s_total_result_pages }}
+                &dash;
+                <a href='?page={{ .i_page }}&limit=12{{ if ne .from "" }}?from={{.from}}{{ end }}' class="{{ if eq .i_limit 12 }}fw-bolder{{else}}fw-light{{end}}" title="12 Results Per Page">12</a>
+                &#47;
+                <a href='?page={{ .i_page }}&limit=17{{ if ne .from "" }}?from={{.from}}{{ end }}'  class="{{ if eq .i_limit 17 }}fw-bolder{{else}}fw-light{{end}}" title="17 Results Per Page">17</a>
+                &#47;
+                <a href='?page={{ .i_page }}&limit=33{{ if ne .from "" }}?from={{.from}}{{ end }}'  class="{{ if eq .i_limit 33 }}fw-bolder{{else}}fw-light{{end}}" title="33 Results Per Page">33</a>
+                &#47;
+                <a href='?page={{ .i_page }}&limit=45{{ if ne .from "" }}?from={{.from}}{{ end }}'  class="{{ if eq .i_limit 45 }}fw-bolder{{else}}fw-light{{end}}" title="45 Results Per Page">45</a>
+                &#47;
+                <a href='?page={{ .i_page }}&limit=47{{ if ne .from "" }}?from={{.from}}{{ end }}'  class="{{ if eq .i_limit 47 }}fw-bolder{{else}}fw-light{{end}}" title="47 Results Per Page">47</a>
+                &#47;
+                <a href='?page={{ .i_page }}&limit=63{{ if ne .from "" }}?from={{.from}}{{ end }}'  class="{{ if eq .i_limit 63 }}fw-bolder{{else}}fw-light{{end}}" title="63 Results Per Page">63</a>
+                &#47;
+                <a href='?page={{ .i_page }}&limit=72{{ if ne .from "" }}?from={{.from}}{{ end }}'  class="{{ if eq .i_limit 72 }}fw-bolder{{else}}fw-light{{end}}" title="72 Results Per Page">72</a>
+                &#47;
+                <a href='?page={{ .i_page }}&limit=144{{ if ne .from "" }}?from={{.from}}{{ end }}'  class="{{ if eq .i_limit 144 }}fw-bolder{{else}}fw-light{{end}}" title="144 Results Per Page">144</a>
+                &dash;
+                Total Results: {{ .s_total_matching_page_identifiers }}
             </div>
         </div>
         {{ render_partial "footer" .dark_mode }}

@@ -18,7 +18,11 @@
             <div class="row row-cols-1 row-cols-sm-2 row-cols-md-4 g-4">
                 {{ $outer := . }}
                 {{ range .pages }}
-                    {{ render_page_card .PageIdentifier $outer.dark_mode }}
+                    {{ if eq $outer.from "" }}
+                        {{ render_page_card .PageIdentifier $outer.dark_mode }}
+                    {{ else }}
+                        {{ render_page_card_from .PageIdentifier $outer.dark_mode $outer.from }}
+                    {{ end }}
                 {{ end }}
             </div>
         </div>

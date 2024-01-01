@@ -9,6 +9,7 @@ import (
 	`net/http`
 	`os`
 	`path/filepath`
+	`regexp`
 	`strings`
 
 	`github.com/gin-gonic/gin`
@@ -76,6 +77,8 @@ func r_get_page(c *gin.Context) {
 
 	metadata["Page"] = fmt.Sprintf("Page %d of %d", page_number, total_pages)
 	metadata["Source URL"] = source_url
+	template_vars["i_page"] = int(page_number)
+	template_vars["i_total_pages"] = int(total_pages)
 	template_vars["metadata"] = metadata
 	template_vars["cover_small"] = fmt.Sprintf("/covers/%v/%v/small.jpg", document_identifier, page_identifier)
 	template_vars["cover_medium"] = fmt.Sprintf("/covers/%v/%v/medium.jpg", document_identifier, page_identifier)
@@ -136,9 +139,23 @@ func r_get_page(c *gin.Context) {
 
 	ocr := string(ocr_bytes)
 	gematria := NewGemScore(ocr)
-
 	template_vars["full_text"] = ocr
+
+	from := c.DefaultQuery("from", "")
+	if len(from) > 0 && from != "stumbleinto" {
+		match_replacement := "<span class='badge text-bg-warning'>$0</span>"
+		search_analysis := AnalyzeQuery(strings.ReplaceAll(from, "%20", ""))
+		for _, inclusive := range search_analysis.Ands {
+			re_from := regexp.QuoteMeta(inclusive)
+			re, re_err := regexp.Compile(`\b` + re_from + `\b`)
+			if re_err == nil {
+				ocr = re.ReplaceAllString(ocr, match_replacement)
+			}
+		}
+	}
+
 	template_vars["gematria"] = gematria
+	template_vars["full_text"] = template.HTML(ocr)
 
 	tmpl := template.Must(template.New("view-page").Funcs(gin_func_map).Parse(string(data)))
 

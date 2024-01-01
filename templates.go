@@ -82,7 +82,7 @@ func compile_partial_template(path string, dark_mode string) (template.HTML, err
 
 // render_document_card is used for all-documents showing the cover page of a document
 func render_document_card(cover_page_identifier string, dark_mode string) template.HTML {
-	body, err := compile_page_card(cover_page_identifier, dark_mode, "document")
+	body, err := compile_page_card(cover_page_identifier, dark_mode, "document", "")
 	if err != nil {
 		return template.HTML("Error: " + err.Error())
 	}
@@ -91,7 +91,16 @@ func render_document_card(cover_page_identifier string, dark_mode string) templa
 
 // render_page_card is used when viewing a document's pages, this is the per-page card
 func render_page_card(page_identifier string, dark_mode string) template.HTML {
-	body, err := compile_page_card(page_identifier, dark_mode, "page")
+	body, err := compile_page_card(page_identifier, dark_mode, "page", "")
+	if err != nil {
+		return template.HTML("Error: " + err.Error())
+	}
+	return body
+}
+
+// render_page_card is used when viewing a document's pages, this is the per-page card
+func render_page_card_from(page_identifier string, dark_mode string, from string) template.HTML {
+	body, err := compile_page_card(page_identifier, dark_mode, "page", from)
 	if err != nil {
 		return template.HTML("Error: " + err.Error())
 	}
@@ -99,7 +108,7 @@ func render_page_card(page_identifier string, dark_mode string) template.HTML {
 }
 
 // compile_page_card builds a template and returns the populated HTML parent_object controls the bundled/assets/component rendered
-func compile_page_card(page_identifier string, dark_mode string, parent_object string) (template.HTML, error) {
+func compile_page_card(page_identifier string, dark_mode string, parent_object string, from string) (template.HTML, error) {
 	filename := fmt.Sprintf("bundled/assets/components/%v-card.html", parent_object)
 	data, bundle_err := bundled_files.ReadFile(filename)
 	if bundle_err != nil {
@@ -123,6 +132,8 @@ func compile_page_card(page_identifier string, dark_mode string, parent_object s
 
 	existing_vars["is_dark_mode"] = dark_mode // override with argument value
 	existing_vars["page_identifier"] = page_identifier
+
+	existing_vars["from"] = from
 
 	mu_page_identifier_document.RLock()
 	document_identifier := m_page_identifier_document[page_identifier]

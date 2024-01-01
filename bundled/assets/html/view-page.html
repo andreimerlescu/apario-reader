@@ -10,13 +10,33 @@
         <div class="text-center">
             {{ render_partial "header" .dark_mode }}
         </div>
+        {{ $outer := . }}
         <div class="row">
             <div class="col-lg-6 col-sm-12 col-md-8">
-                <!-- page -->
                 <img src="{{.cover_large}}" class="lazyload img-fluid shadow-sm" alt="Page {{.page_number}} of {{.meta_record_number }}"/>
             </div>
             <div class="col-lg-6 col-sm-12 col-md-4">
-                <!-- sidebar -->
+                <div class="px-4 py-4 text-center">
+                    <div class="btn-group mb-4" role="group" aria-label="Pagination">
+                        <a href="/page/{{ get_pg_id_from_doc_id_def_id_and_cur_pg_num .document_identifier .page_identifier 1 }}" class="btn btn-outline-primary {{ if eq .i_page 1 }}disabled{{ end }}">First</a>
+                        <a href="/page/{{ get_pg_id_from_doc_id_def_id_and_cur_pg_num .document_identifier .page_identifier ( minus .i_page 1 ) }}" class="btn btn-outline-primary {{ if eq .i_page 1 }}disabled{{ end }}">Previous</a>
+
+                        {{ if gt (minus .i_page 3) 1 }}
+                        <span class="btn btn-outline-primary disabled">...</span>
+                        {{ end }}
+
+                        {{ range $i := sequence (max 1 (minus .i_page 6)) (min .i_total_pages (plus .i_page 6)) }}
+                        <a href="/page/{{ get_pg_id_from_doc_id_def_id_and_cur_pg_num $outer.document_identifier $outer.page_identifier $i }}" class="btn btn-outline-primary {{ if eq $outer.i_page $i }}disabled{{ end }}">{{ $i }}</a>
+                        {{ end }}
+
+                        {{ if lt (plus .i_page 3) .i_total_pages }}
+                        <span class="btn btn-outline-primary disabled">...</span>
+                        {{ end }}
+
+                        <a href="/page/{{ get_pg_id_from_doc_id_def_id_and_cur_pg_num .document_identifier .page_identifier ( plus .i_page 1 ) }}" class="btn btn-outline-primary {{ if eq .i_page .i_total_pages }}disabled{{ end }}">Next</a>
+                        <a href="/page/{{ get_pg_id_from_doc_id_def_id_and_cur_pg_num .document_identifier .page_identifier .i_total_pages }}" class="btn btn-outline-primary {{ if eq .i_page .i_total_pages }}disabled{{ end }}">Last</a>
+                    </div>
+                </div>
                 <h5 class="lead">Full Text</h5>
                 <hr>
                 {{ .full_text }}
@@ -55,6 +75,8 @@
                             <td>
                                 {{ if eq $key "Source URL" }}
                                     <a href="{{ $value }}" title="Access Source URL" target="_blank">{{ $value }}</a>
+                                {{ else if eq $key "title" }}
+                                    <a href='/document/{{ $outer.document_identifier }}{{ if ne $outer.from "" }}?from={{ $outer.from }}{{ end }}'>{{ $value }}</a>
                                 {{ else if eq $key "record_number" }}
                                     <a href="/download/document/{{ $outer.document_identifier }}/{{ $value }}.pdf" title="Download {{ $value }}.pdf" target="_blank">
                                         Download Full OCR Document &#8599;

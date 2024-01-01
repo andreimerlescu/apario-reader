@@ -1,7 +1,9 @@
 package main
 
 import (
+	`bufio`
 	`encoding/json`
+	`errors`
 	`fmt`
 	`io/fs`
 	`log`
@@ -9,6 +11,7 @@ import (
 	`os`
 	`path/filepath`
 	`strings`
+	`sync`
 )
 
 func database_load() error {
@@ -437,5 +440,226 @@ func analyze_page(record_identifier string, path string, i uint) {
 			Gematria:           gematria,
 		}
 		mu_document_page_number_page.Unlock()
+	}
+}
+
+func dump_database_to_disk() {
+	if !*flag_b_persist_runtime_database {
+		log.Printf("skipping dump_database_to_disk because config.yaml persist-runtime-database is set to false [the default]")
+		return
+	}
+	err := os.MkdirAll(*flag_s_persistent_database_file, 0755)
+	if err != nil {
+		return
+	}
+
+	wg := sync.WaitGroup{}
+	go write_payload_to_file("m_cryptonyms.json", &wg, &mu_cryptonyms, &m_cryptonyms)
+	go write_payload_to_file("m_collections.json", &wg, &mu_collections, &m_collections)
+	go write_payload_to_file("m_collection_documents.json", &wg, &mu_collection_documents, &m_collection_documents)
+	go write_payload_to_file("m_word_pages.json", &wg, &mu_word_pages, &m_word_pages)
+	go write_payload_to_file("m_document_page_number_page.json", &wg, &mu_document_page_number_page, &m_document_page_number_page)
+	go write_payload_to_file("m_document_page_identifiers_pgno.json", &wg, &mu_document_page_identifiers_pgno, &m_document_page_identifiers_pgno)
+	go write_payload_to_file("m_document_pgno_page_identifier.json", &wg, &mu_document_pgno_page_identifier, &m_document_pgno_page_identifier)
+	go write_payload_to_file("m_page_identifier_document.json", &wg, &mu_page_identifier_document, &m_page_identifier_document)
+	go write_payload_to_file("m_page_identifier_page_number.json", &wg, &mu_page_identifier_page_number, &m_page_identifier_page_number)
+	go write_payload_to_file("m_document_total_pages.json", &wg, &mu_document_total_pages, &m_document_total_pages)
+	go write_payload_to_file("m_document_source_url.json", &wg, &mu_document_source_url, &m_document_source_url)
+	go write_payload_to_file("m_document_metadata.json", &wg, &mu_document_metadata, &m_document_metadata)
+	go write_payload_to_file("m_index_page_identifier.json", &wg, &mu_index_page_identifier, &m_index_page_identifier)
+	go write_payload_to_file("m_index_document_identifier.json", &wg, &mu_index_document_identifier, &m_index_document_identifier)
+	go write_payload_to_file("m_document_identifier_directory.json", &wg, &mu_document_identifier_directory, &m_document_identifier_directory)
+	go write_payload_to_file("m_document_identifier_cover_page_identifier.json", &wg, &mu_document_identifier_cover_page_identifier, &m_document_identifier_cover_page_identifier)
+	go write_payload_to_file("m_page_gematria_english.json", &wg, &mu_page_gematria_english, &m_page_gematria_english)
+	go write_payload_to_file("m_page_gematria_jewish.json", &wg, &mu_page_gematria_jewish, &m_page_gematria_jewish)
+	go write_payload_to_file("m_page_gematria_simple.json", &wg, &mu_page_gematria_simple, &m_page_gematria_simple)
+	go write_payload_to_file("m_location_cities.json", &wg, &mu_location_cities, &m_location_cities)
+	go write_payload_to_file("m_location_countries.json", &wg, &mu_location_countries, &m_location_countries)
+	go write_payload_to_file("m_location_states.json", &wg, &mu_location_states, &m_location_states)
+	wg.Wait()
+	log.Println("finished writing database to disk")
+
+}
+
+func restore_database_from_disk() {
+	if !can_restore_database_from_disk() {
+		log.Printf("cannot restore_database_from_disk due to failed santity check")
+		return
+	}
+	wg := sync.WaitGroup{}
+	go load_file_into_payload("m_cryptonyms.json", &wg, &mu_cryptonyms, &m_cryptonyms)
+	go load_file_into_payload("m_collections.json", &wg, &mu_collections, &m_collections)
+	go load_file_into_payload("m_collection_documents.json", &wg, &mu_collection_documents, &m_collection_documents)
+	go load_file_into_payload("m_word_pages.json", &wg, &mu_word_pages, &m_word_pages)
+	go load_file_into_payload("m_document_page_number_page.json", &wg, &mu_document_page_number_page, &m_document_page_number_page)
+	go load_file_into_payload("m_document_page_identifiers_pgno.json", &wg, &mu_document_page_identifiers_pgno, &m_document_page_identifiers_pgno)
+	go load_file_into_payload("m_document_pgno_page_identifier.json", &wg, &mu_document_pgno_page_identifier, &m_document_pgno_page_identifier)
+	go load_file_into_payload("m_page_identifier_document.json", &wg, &mu_page_identifier_document, &m_page_identifier_document)
+	go load_file_into_payload("m_page_identifier_page_number.json", &wg, &mu_page_identifier_page_number, &m_page_identifier_page_number)
+	go load_file_into_payload("m_document_total_pages.json", &wg, &mu_document_total_pages, &m_document_total_pages)
+	go load_file_into_payload("m_document_source_url.json", &wg, &mu_document_source_url, &m_document_source_url)
+	go load_file_into_payload("m_document_metadata.json", &wg, &mu_document_metadata, &m_document_metadata)
+	go load_file_into_payload("m_index_page_identifier.json", &wg, &mu_index_page_identifier, &m_index_page_identifier)
+	go load_file_into_payload("m_index_document_identifier.json", &wg, &mu_index_document_identifier, &m_index_document_identifier)
+	go load_file_into_payload("m_document_identifier_directory.json", &wg, &mu_document_identifier_directory, &m_document_identifier_directory)
+	go load_file_into_payload("m_document_identifier_cover_page_identifier.json", &wg, &mu_document_identifier_cover_page_identifier, &m_document_identifier_cover_page_identifier)
+	go load_file_into_payload("m_page_gematria_english.json", &wg, &mu_page_gematria_english, &m_page_gematria_english)
+	go load_file_into_payload("m_page_gematria_jewish.json", &wg, &mu_page_gematria_jewish, &m_page_gematria_jewish)
+	go load_file_into_payload("m_page_gematria_simple.json", &wg, &mu_page_gematria_simple, &m_page_gematria_simple)
+	go load_file_into_payload("m_location_cities.json", &wg, &mu_location_cities, &m_location_cities)
+	go load_file_into_payload("m_location_countries.json", &wg, &mu_location_countries, &m_location_countries)
+	go load_file_into_payload("m_location_states.json", &wg, &mu_location_states, &m_location_states)
+	wg.Wait()
+	a_b_locations_loaded.Store(true)
+	a_i_total_documents.Store(int64(len(m_document_total_pages)))
+	a_i_total_pages.Store(int64(len(m_page_identifier_page_number)))
+	log.Println("finished reading database into memory")
+	return
+}
+
+func f_clear_db_restore_file() {
+	file := filepath.Join(".", *flag_s_flush_db_cache_watch_file)
+	flush_cache_file_info, flush_cache_file_err := os.Stat(file)
+	if errors.Is(os.ErrNotExist, flush_cache_file_err) || errors.Is(os.ErrPermission, flush_cache_file_err) {
+		log.Printf("cannot remove the %v because it does not exist [%v]", file, flush_cache_file_err)
+		return // file not present
+	}
+	mode := flush_cache_file_info.Mode()
+	if mode.IsDir() {
+		log.Printf("PROBLEM: the %v file is a directory when the program expected it to be an empty text file [%d bytes]\n", file, flush_cache_file_info.Size())
+		return
+	} else if (mode & os.ModeSymlink) != 0 {
+		log.Printf("PROBLEM: the %v file is a symlink when the program expected it to be an empty text file [%d bytes]\n", file, flush_cache_file_info.Size())
+		return
+	} else if (mode & os.ModeType) == 0 {
+		log.Printf("found a regular file %v and will flush the database cache because this file is present then we'll delete this file after", file)
+		rm_rf_err := os.RemoveAll(filepath.Join(*flag_s_persistent_database_file, "*.json"))
+		if rm_rf_err != nil {
+			log.Printf("error removing the *.json files from %v/* due to err %v", *flag_s_persistent_database_file, rm_rf_err)
+			return
+		}
+		err := os.Remove(file)
+		if err != nil {
+			log.Printf("failed to remove the %v due to err %v", file, err)
+			return
+		}
+	}
+}
+
+func f_b_db_flush_file_set() bool {
+	file := filepath.Join(".", *flag_s_flush_db_cache_watch_file)
+	flush_cache_file_info, flush_cache_file_err := os.Stat(file)
+	if flush_cache_file_err != nil {
+		return false // file not present
+	}
+	mode := flush_cache_file_info.Mode()
+	if mode.IsDir() {
+		log.Printf("PROBLEM: the %v file is a directory when the program expected it to be an empty text file [%d bytes]\n", file, flush_cache_file_info.Size())
+		return false
+	} else if (mode & os.ModeSymlink) != 0 {
+		log.Printf("PROBLEM: the %v file is a symlink when the program expected it to be an empty text file [%d bytes]\n", file, flush_cache_file_info.Size())
+		return false
+	} else if (mode & os.ModeType) == 0 {
+		log.Printf("found a regular file %v and will flush the database cache because this file is present then we'll delete this file after", file)
+		return true
+	}
+
+	return false
+}
+
+func can_restore_database_from_disk() bool {
+	return *flag_b_load_persistent_runtime_database &&
+		f_b_path_exists(filepath.Join(*flag_s_persistent_database_file, "m_cryptonyms.json")) &&
+		f_b_path_exists(filepath.Join(*flag_s_persistent_database_file, "m_collections.json")) &&
+		f_b_path_exists(filepath.Join(*flag_s_persistent_database_file, "m_collection_documents.json")) &&
+		f_b_path_exists(filepath.Join(*flag_s_persistent_database_file, "m_word_pages.json")) &&
+		f_b_path_exists(filepath.Join(*flag_s_persistent_database_file, "m_document_page_number_page.json")) &&
+		f_b_path_exists(filepath.Join(*flag_s_persistent_database_file, "m_document_page_identifiers_pgno.json")) &&
+		f_b_path_exists(filepath.Join(*flag_s_persistent_database_file, "m_document_pgno_page_identifier.json")) &&
+		f_b_path_exists(filepath.Join(*flag_s_persistent_database_file, "m_page_identifier_document.json")) &&
+		f_b_path_exists(filepath.Join(*flag_s_persistent_database_file, "m_page_identifier_page_number.json")) &&
+		f_b_path_exists(filepath.Join(*flag_s_persistent_database_file, "m_document_total_pages.json")) &&
+		f_b_path_exists(filepath.Join(*flag_s_persistent_database_file, "m_document_source_url.json")) &&
+		f_b_path_exists(filepath.Join(*flag_s_persistent_database_file, "m_document_metadata.json")) &&
+		f_b_path_exists(filepath.Join(*flag_s_persistent_database_file, "m_index_page_identifier.json")) &&
+		f_b_path_exists(filepath.Join(*flag_s_persistent_database_file, "m_index_document_identifier.json")) &&
+		f_b_path_exists(filepath.Join(*flag_s_persistent_database_file, "m_document_identifier_directory.json")) &&
+		f_b_path_exists(filepath.Join(*flag_s_persistent_database_file, "m_document_identifier_cover_page_identifier.json")) &&
+		f_b_path_exists(filepath.Join(*flag_s_persistent_database_file, "m_page_gematria_english.json")) &&
+		f_b_path_exists(filepath.Join(*flag_s_persistent_database_file, "m_page_gematria_jewish.json")) &&
+		f_b_path_exists(filepath.Join(*flag_s_persistent_database_file, "m_page_gematria_simple.json")) &&
+		f_b_path_exists(filepath.Join(*flag_s_persistent_database_file, "m_location_cities.json")) &&
+		f_b_path_exists(filepath.Join(*flag_s_persistent_database_file, "m_location_countries.json")) &&
+		f_b_path_exists(filepath.Join(*flag_s_persistent_database_file, "m_location_states.json"))
+}
+
+func f_b_path_exists(path string) bool {
+	info, info_err := os.Stat(path)
+	if errors.Is(info_err, os.ErrNotExist) || errors.Is(info_err, os.ErrPermission) {
+		log.Printf("skipping %v due to err %v", path, info_err)
+		return false
+	}
+
+	if info.Size() == 0 {
+		log.Printf("skipping %v due to size = 0 bytes", path)
+		return false
+	}
+	return true
+}
+
+func load_file_into_payload(filename string, wg *sync.WaitGroup, mu *sync.RWMutex, payload any) {
+	wg.Add(1)
+	defer wg.Done()
+
+	path := filepath.Join(*flag_s_persistent_database_file, filename)
+	if !f_b_path_exists(path) {
+		log.Printf("skipping %v due to size = 0 bytes", path)
+		return
+	}
+
+	bytes, bytes_err := os.ReadFile(path)
+	if bytes_err != nil {
+		log.Printf("failed to read file %v due to err %v", path, bytes_err)
+		return
+	}
+	mu.Lock()
+	err := json.Unmarshal(bytes, &payload)
+	mu.Unlock()
+	if err != nil {
+		log.Printf("failed to unmarshal bytes for %v due to err %v", filename, err)
+		return
+	}
+
+	log.Printf("completed loading file %v into the payload\n", filename)
+}
+
+func write_payload_to_file(filename string, wg *sync.WaitGroup, mu *sync.RWMutex, payload any) {
+	wg.Add(1)
+	defer wg.Done()
+	file, err := os.Create(filepath.Join(*flag_s_persistent_database_file, filename))
+	if err != nil {
+		fmt.Println("Error opening file:", err)
+		return
+	}
+	defer file.Close()
+
+	bufferedWriter := bufio.NewWriter(file)
+	mu.RLock()
+	marshal, err := json.Marshal(payload)
+	mu.RUnlock()
+	if err != nil {
+		fmt.Println("Error writing to file:", err)
+		return
+	}
+
+	_, err = bufferedWriter.Write(marshal)
+	if err != nil {
+		fmt.Println("Error writing to file:", err)
+		return
+	}
+
+	if err := bufferedWriter.Flush(); err != nil {
+		fmt.Println("Error flushing writer:", err)
+		return
 	}
 }

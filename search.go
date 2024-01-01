@@ -1,19 +1,14 @@
 package main
 
 import (
-	`bytes`
 	`context`
-	`encoding/json`
 	"fmt"
 	"log"
-	`net/http`
 	"regexp"
 	"strings"
 	"sync/atomic"
-	`time`
 
 	go_smartchan `github.com/andreimerlescu/go-smartchan`
-	`github.com/gin-gonic/gin`
 	`github.com/xrash/smetrics`
 )
 
@@ -399,6 +394,7 @@ func find_pages_for_word(ctx context.Context, sch *go_smartchan.SmartChan, query
 			}
 		} else { // use jaro_winkler
 			distance = smetrics.JaroWinkler(query, word, *flag_f_search_jaro_winkler_boost_threshold, *flag_i_search_jaro_winkler_prefix_size)
+			log.Printf("received smetrics.JaroWinkler result for %v with distance of %f", query, distance)
 			if distance >= *flag_f_search_jaro_winkler_threshold {
 				for page_identifier, _ := range pages {
 					select {
@@ -421,31 +417,4 @@ func find_pages_for_word(ctx context.Context, sch *go_smartchan.SmartChan, query
 		return fmt.Errorf("no results for %v", query)
 	}
 	return nil
-}
-
-func deliver_search_results(c *gin.Context, query string, analysis SearchAnalysis, inclusive map[string]struct{}, exclusive map[string]struct{}) {
-	var page_identifiers []string
-	for identifier, _ := range inclusive {
-		_, excluded := exclusive[identifier]
-		if !excluded {
-			page_identifiers = append(page_identifiers, identifier)
-		}
-	}
-	result := SearchResult{
-		Query:    query,
-		Analysis: analysis,
-		Total:    len(page_identifiers),
-		//Inclusive: inclusive_page_identifiers,
-		//Exclusive: exclusive_page_identifiers,
-		Results: page_identifiers,
-	}
-
-	marshal, err := json.Marshal(result)
-	if err != nil {
-		c.String(http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	http.ServeContent(c.Writer, c.Request, "", time.Now(), bytes.NewReader(marshal))
-	return
 }

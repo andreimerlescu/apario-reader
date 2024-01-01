@@ -1,6 +1,6 @@
 <div class="col">
     <div class="card text-center mb-3">
-        <a href="/page/{{.page_identifier}}" title="{{ .meta_title }}">
+        <a href='/page/{{.page_identifier}}{{ if ne .from "" }}?from={{.from}}{{ end }}' title="{{ .meta_title }}">
             <img src="{{ .cover_medium }}" class="card-img-top lazyload" alt="{{ .meta_record_number }} - {{ .meta_title }}">
         </a>
         <div class="card-body">
@@ -23,7 +23,7 @@
                 {{ end }}
             </small>
             <div class="btn-group btn-group-sm my-2">
-                <a href="/page/{{.page_identifier}}" class="btn btn-primary">Read Page</a>
+                <a href='/page/{{.page_identifier}}{{ if ne .from "" }}?from={{.from}}{{ end }}' class="btn btn-primary">Read Page</a>
                 <a href="{{.url}}" target="_blank" class="btn btn-warning">Source &#8599;</a>
             </div>
         </div>

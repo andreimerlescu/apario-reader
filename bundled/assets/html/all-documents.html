@@ -6,80 +6,83 @@
 </head>
 <body>
 <main>
-    <div class="px-4 py-5 my-5 text-center">
-        {{ render_partial "header" .dark_mode }}
+    <div class="px-4 py-5 my-5">
+        <div class="text-center">
+            {{ render_partial "header" .dark_mode }}
+        </div>
+        {{ $outer := . }}
         <div class="container">
-            <div class="btn-group mb-4" role="group" aria-label="Pagination">
-                <!-- First and Previous -->
-                <a href="?page=1&limit={{ .i_limit }}" class="btn btn-outline-primary {{ if eq .i_page 1 }}disabled{{ end }}">First</a>
-                <a href="?page={{ minus .i_page 1 }}&limit={{ .i_limit }}" class="btn btn-outline-primary {{ if eq .i_page 1 }}disabled{{ end }}">Previous</a>
+            <div class="text-center">
+                <div class="btn-group mb-4" role="group" aria-label="Pagination">
+                    <a href="?page=1&limit={{ .i_limit }}" class="btn btn-outline-primary {{ if eq .i_page 1 }}disabled{{ end }}">First</a>
+                    <a href="?page={{ minus .i_page 1 }}&limit={{ .i_limit }}" class="btn btn-outline-primary {{ if eq .i_page 1 }}disabled{{ end }}">Previous</a>
 
-                {{ if gt (minus .i_page 3) 1 }}
-                <span class="btn btn-outline-primary disabled">...</span>
-                {{ end }}
+                    {{ if gt (minus .i_page 3) 1 }}
+                    <span class="btn btn-outline-primary disabled">...</span>
+                    {{ end }}
 
-                {{ $outer := . }}
-                {{ range $i := sequence (max 1 (minus .i_page 3)) (min .i_total_pages (plus .i_page 3)) }}
-                <a href="?page={{ $i }}&limit={{ $outer.i_limit }}" class="btn btn-outline-primary {{ if eq $outer.i_page $i }}disabled{{ end }}">{{ $i }}</a>
-                {{ end }}
+                    {{ range $i := sequence (max 1 (minus .i_page 3)) (min .i_total_pages (plus .i_page 3)) }}
+                        <a href="?page={{ $i }}&limit={{ $outer.i_limit }}" class="btn btn-outline-primary {{ if eq $outer.i_page $i }}disabled{{ end }}">{{ $i }}</a>
+                    {{ end }}
 
-                {{ if lt (plus .i_page 3) .i_total_pages }}
-                <span class="btn btn-outline-primary disabled">...</span>
-                {{ end }}
+                    {{ if lt (plus .i_page 3) .i_total_pages }}
+                    <span class="btn btn-outline-primary disabled">...</span>
+                    {{ end }}
 
-                <a href="?page={{ plus .i_page 1 }}&limit={{ .i_limit }}" class="btn btn-outline-primary {{ if eq .i_page .i_total_pages }}disabled{{ end }}">Next</a>
-                <a href="?page={{ .i_total_pages }}&limit={{ .i_limit }}" class="btn btn-outline-primary {{ if eq .i_page .i_total_pages }}disabled{{ end }}">Last</a>
+                    <a href="?page={{ plus .i_page 1 }}&limit={{ .i_limit }}" class="btn btn-outline-primary {{ if eq .i_page .i_total_pages }}disabled{{ end }}">Next</a>
+                    <a href="?page={{ .i_total_pages }}&limit={{ .i_limit }}" class="btn btn-outline-primary {{ if eq .i_page .i_total_pages }}disabled{{ end }}">Last</a>
+                </div>
             </div>
+
             <div class="row row-cols-1 row-cols-sm-2 row-cols-md-4 g-4">
-                {{ $outer := . }}
                 {{ range .page_identifiers }}
                     {{ render_document_card . $outer.dark_mode }}
                 {{ end }}
             </div>
-            <div class="btn-group my-2" role="group" aria-label="Pagination">
-                <!-- First and Previous -->
-                <a href="?page=1&limit={{ .i_limit }}" class="btn btn-outline-primary {{ if eq .i_page 1 }}disabled{{ end }}">First</a>
-                <a href="?page={{ minus .i_page 1 }}&limit={{ .i_limit }}" class="btn btn-outline-primary {{ if eq .i_page 1 }}disabled{{ end }}">Previous</a>
 
-                {{ if gt (minus .i_page 3) 1 }}
-                <span class="btn btn-outline-primary disabled">...</span>
-                {{ end }}
+            <div class="text-center">
+                <div class="btn-group my-2" role="group" aria-label="Pagination">
+                    <a href="?page=1&limit={{ .i_limit }}" class="btn btn-outline-primary {{ if eq .i_page 1 }}disabled{{ end }}">First</a>
+                    <a href="?page={{ minus .i_page 1 }}&limit={{ .i_limit }}" class="btn btn-outline-primary {{ if eq .i_page 1 }}disabled{{ end }}">Previous</a>
 
-                {{ $outer := . }}
-                {{ range $i := sequence (max 1 (minus .i_page 3)) (min .i_total_pages (plus .i_page 3)) }}
-                <a href="?page={{ $i }}&limit={{ $outer.i_limit }}" class="btn btn-outline-primary {{ if eq $outer.i_page $i }}disabled{{ end }}">{{ $i }}</a>
-                {{ end }}
+                    {{ if gt (minus .i_page 3) 1 }}
+                    <span class="btn btn-outline-primary disabled">...</span>
+                    {{ end }}
 
-                {{ if lt (plus .i_page 3) .i_total_pages }}
-                <span class="btn btn-outline-primary disabled">...</span>
-                {{ end }}
+                    {{ range $i := sequence (max 1 (minus .i_page 3)) (min .i_total_pages (plus .i_page 3)) }}
+                        <a href="?page={{ $i }}&limit={{ $outer.i_limit }}" class="btn btn-outline-primary {{ if eq $outer.i_page $i }}disabled{{ end }}">{{ $i }}</a>
+                    {{ end }}
 
-                <a href="?page={{ plus .i_page 1 }}&limit={{ .i_limit }}" class="btn btn-outline-primary {{ if eq .i_page .i_total_pages }}disabled{{ end }}">Next</a>
-                <a href="?page={{ .i_total_pages }}&limit={{ .i_limit }}" class="btn btn-outline-primary {{ if eq .i_page .i_total_pages }}disabled{{ end }}">Last</a>
+                    {{ if lt (plus .i_page 3) .i_total_pages }}
+                    <span class="btn btn-outline-primary disabled">...</span>
+                    {{ end }}
+
+                    <a href="?page={{ plus .i_page 1 }}&limit={{ .i_limit }}" class="btn btn-outline-primary {{ if eq .i_page .i_total_pages }}disabled{{ end }}">Next</a>
+                    <a href="?page={{ .i_total_pages }}&limit={{ .i_limit }}" class="btn btn-outline-primary {{ if eq .i_page .i_total_pages }}disabled{{ end }}">Last</a>
+                </div>
+                <div class="mt-2">
+                    Page {{ .page }} of {{ .total_pages }}
+                    &dash;
+                    <a href="?page={{ .i_page }}&limit=12" class="{{ if eq .i_limit 12 }}fw-bolder{{else}}fw-light{{end}}" title="12 Documents Per Page">12</a>
+                    &#47;
+                    <a href="?page={{ .i_page }}&limit=17"  class="{{ if eq .i_limit 17 }}fw-bolder{{else}}fw-light{{end}}" title="17 Documents Per Page">17</a>
+                    &#47;
+                    <a href="?page={{ .i_page }}&limit=33"  class="{{ if eq .i_limit 33 }}fw-bolder{{else}}fw-light{{end}}" title="33 Documents Per Page">33</a>
+                    &#47;
+                    <a href="?page={{ .i_page }}&limit=45"  class="{{ if eq .i_limit 45 }}fw-bolder{{else}}fw-light{{end}}" title="45 Documents Per Page">45</a>
+                    &#47;
+                    <a href="?page={{ .i_page }}&limit=47"  class="{{ if eq .i_limit 47 }}fw-bolder{{else}}fw-light{{end}}" title="47 Documents Per Page">47</a>
+                    &#47;
+                    <a href="?page={{ .i_page }}&limit=63"  class="{{ if eq .i_limit 63 }}fw-bolder{{else}}fw-light{{end}}" title="63 Documents Per Page">63</a>
+                    &#47;
+                    <a href="?page={{ .i_page }}&limit=72"  class="{{ if eq .i_limit 72 }}fw-bolder{{else}}fw-light{{end}}" title="72 Documents Per Page">72</a>
+                    &#47;
+                    <a href="?page={{ .i_page }}&limit=144"  class="{{ if eq .i_limit 144 }}fw-bolder{{else}}fw-light{{end}}" title="144 Documents Per Page">144</a>
+                    &dash;
+                    Total Documents: {{ .total_documents }}
+                </div>
             </div>
 
-
-            <div class="mt-2">
-                Page {{ .page }} of {{ .total_pages }}
-                &dash;
-                <a href="?page={{ .i_page }}&limit=12" class="{{ if eq .i_limit 12 }}fw-bolder{{else}}fw-light{{end}}" title="12 Documents Per Page">12</a>
-                &#47;
-                <a href="?page={{ .i_page }}&limit=17"  class="{{ if eq .i_limit 17 }}fw-bolder{{else}}fw-light{{end}}" title="17 Documents Per Page">17</a>
-                &#47;
-                <a href="?page={{ .i_page }}&limit=33"  class="{{ if eq .i_limit 33 }}fw-bolder{{else}}fw-light{{end}}" title="33 Documents Per Page">33</a>
-                &#47;
-                <a href="?page={{ .i_page }}&limit=45"  class="{{ if eq .i_limit 45 }}fw-bolder{{else}}fw-light{{end}}" title="45 Documents Per Page">45</a>
-                &#47;
-                <a href="?page={{ .i_page }}&limit=47"  class="{{ if eq .i_limit 47 }}fw-bolder{{else}}fw-light{{end}}" title="47 Documents Per Page">47</a>
-                &#47;
-                <a href="?page={{ .i_page }}&limit=63"  class="{{ if eq .i_limit 63 }}fw-bolder{{else}}fw-light{{end}}" title="63 Documents Per Page">63</a>
-                &#47;
-                <a href="?page={{ .i_page }}&limit=72"  class="{{ if eq .i_limit 72 }}fw-bolder{{else}}fw-light{{end}}" title="72 Documents Per Page">72</a>
-                &#47;
-                <a href="?page={{ .i_page }}&limit=144"  class="{{ if eq .i_limit 144 }}fw-bolder{{else}}fw-light{{end}}" title="144 Documents Per Page">144</a>
-                &dash;
-                Total Documents: {{ .total_documents }}
-            </div>
         </div>
         {{ render_partial "footer" .dark_mode }}
     </div>

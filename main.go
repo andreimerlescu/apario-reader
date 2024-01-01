@@ -117,31 +117,41 @@ func main() {
 	//bundled_load_all_words()
 	slog.Info("Break here")
 
-	go process_directories(ch_db_directories.Chan())
-	defer ch_db_directories.Close()
+	if f_b_db_flush_file_set() {
+		f_clear_db_restore_file()
+	}
 
-	go bundled_load_cryptonyms()
+	if can_restore_database_from_disk() {
+		restore_database_from_disk()
+	} else {
+		go process_directories(ch_db_directories.Chan())
+		defer ch_db_directories.Close()
 
-	go func() {
-		wg_active_tasks.Add(1)
-		defer wg_active_tasks.Done()
+		go bundled_load_cryptonyms()
 
-		locationsCsvErr := bundled_load_locations(ctx, processLocation)
-		if locationsCsvErr != nil {
-			log.Printf("received an error while loading the locations: %v", locationsCsvErr) // a problem habbened
+		go func() {
+			wg_active_tasks.Add(1)
+			defer wg_active_tasks.Done()
+
+			locationsCsvErr := bundled_load_locations(ctx, processLocation)
+			if locationsCsvErr != nil {
+				log.Printf("received an error while loading the locations: %v", locationsCsvErr) // a problem habbened
+				return
+			}
+
+			a_b_locations_loaded.Store(true)
+		}()
+
+		err := database_load()
+		if err != nil {
+			slog.Error("failed to load the database with error %v", err)
 			return
 		}
 
-		a_b_locations_loaded.Store(true)
-	}()
+		wg_active_tasks.Wait()
 
-	err := database_load()
-	if err != nil {
-		slog.Error("failed to load the database with error %v", err)
-		return
+		go dump_database_to_disk()
 	}
-
-	wg_active_tasks.Wait()
 
 	slog.Info("done loading the application's database into memory")
 

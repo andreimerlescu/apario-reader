@@ -80,6 +80,7 @@ func r_get_documents(c *gin.Context) {
 		"i_total_pages":     total_pages,
 		"page_identifiers":  page_identifiers,
 		"dark_mode":         gin_is_dark_mode(c),
+		"from":              c.DefaultQuery("from", ""),
 	}); err != nil {
 		c.String(http.StatusInternalServerError, "error executing template", err)
 		log.Println(err)
@@ -106,6 +107,7 @@ func r_get_view_document(c *gin.Context) {
 		"title":     fmt.Sprintf("%v - View Document", *flag_s_site_title), // TODO add record_number and title from metadata here
 		"company":   *flag_s_site_company,
 		"domain":    *flag_s_primary_domain,
+		"from":      c.DefaultQuery("from", ""),
 		"dark_mode": gin_is_dark_mode(c),
 	}
 

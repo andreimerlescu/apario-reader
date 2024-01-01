@@ -2,12 +2,15 @@ package main
 
 import (
 	`context`
+	`encoding/json`
 	`fmt`
 	`html/template`
 	`log`
 	`net/http`
+	`strconv`
 	`strings`
 	`sync`
+	`sync/atomic`
 	`time`
 
 	go_smartchan `github.com/andreimerlescu/go-smartchan`
@@ -133,7 +136,7 @@ func r_get_search(c *gin.Context) {
 
 }
 
-func r_get_search_results(c *gin.Context) {
+func deliver_search_results(c *gin.Context, query string, analysis SearchAnalysis, inclusive map[string]struct{}, exclusive map[string]struct{}) {
 	data, err := bundled_files.ReadFile("bundled/assets/html/search-results.html")
 	if err != nil {
 		c.String(http.StatusInternalServerError, "Failed to load search-results.html")
@@ -142,23 +145,131 @@ func r_get_search_results(c *gin.Context) {
 
 	tmpl := template.Must(template.New("search-results").Funcs(gin_func_map).Parse(string(data)))
 
+	mode := gin_is_dark_mode(c)
+
+	template_vars := gin.H{
+		"title":     fmt.Sprintf("%v - Search Results on %v", query, *flag_s_site_title),
+		"company":   *flag_s_site_company,
+		"domain":    *flag_s_primary_domain,
+		"dark_mode": mode,
+	}
+	template_vars["inverse_dark_mode"] = "dark" // default is light mode, therefore inverse default is dark mode
+	if mode == "dark" || mode == "1" {
+		template_vars["inverse_dark_mode"] = "light"
+	}
+
+	s_page := c.DefaultQuery("page", "1")
+	s_limit := c.DefaultQuery("limit", "12")
+
+	var page int
+	var limit int
+
+	i_page, i_page_err := strconv.Atoi(s_page)
+	if i_page_err != nil {
+		page = 1
+	} else {
+		page = i_page
+	}
+
+	i_limit, i_limit_err := strconv.Atoi(s_limit)
+	if i_limit_err != nil {
+		limit = 12
+	} else {
+		limit = i_limit
+	}
+
+	template_vars["i_page"] = i_page
+	template_vars["s_page"] = s_page
+	template_vars["i_limit"] = i_limit
+	template_vars["s_limit"] = s_limit
+	template_vars["query"] = query
+
+	var i_page_counter atomic.Int64
+	var matching_page_identifiers map[uint]string = make(map[uint]string)
+	for identifier, _ := range inclusive {
+		_, excluded := exclusive[identifier]
+		if !excluded {
+			idx := i_page_counter.Add(1)
+			matching_page_identifiers[uint(idx)] = identifier
+		}
+	}
+	result := SearchResult{
+		Query:    query,
+		Analysis: analysis,
+	}
+
+	marshal, err := json.Marshal(result)
+	if err != nil {
+		c.String(http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	log.Printf("json_output = %v\n", marshal)
+
+	start_index := (page - 1) * limit
+	end_index := start_index + limit
+
+	total_document_pages := len(matching_page_identifiers)
+	total_result_pages := (total_document_pages + limit - 1) / limit // Calculate total pages, rounding up
+	var increased_index_by atomic.Int64
+	var result_page_identifiers []string
+	for i := start_index; i < end_index; i++ {
+		identifier, found := matching_page_identifiers[uint(i)]
+		if found {
+			result_page_identifiers = append(result_page_identifiers, identifier)
+		} else {
+			total_increases := increased_index_by.Add(1)
+			if total_increases < 3 {
+				end_index++
+			}
+		}
+	}
+
+	result.Results = result_page_identifiers
+	result.Total = len(matching_page_identifiers)
+
+	query_gem_score := NewGemScore(result.Query)
+
+	template_vars["total_matching_page_identifiers"] = len(matching_page_identifiers)
+	template_vars["s_total_matching_page_identifiers"] = human_int(int64(len(matching_page_identifiers)))
+	template_vars["total_result_pages"] = total_result_pages
+	template_vars["s_total_result_pages"] = human_int(int64(total_result_pages))
+	template_vars["result_page_identifiers"] = result_page_identifiers
+	template_vars["total_results"] = len(result_page_identifiers)
+	template_vars["s_total_results"] = human_int(int64(len(result_page_identifiers)))
+	template_vars["GemScore"] = query_gem_score
+	template_vars["from"] = query
+
+	type GematriaPages struct {
+		EnglishPages int
+		JewishPages  int
+		SimplePages  int
+	}
+
+	var gematria_pages GematriaPages
+
+	mu_page_gematria_english.RLock()
+	gematria_pages.EnglishPages = len(m_page_gematria_english[query_gem_score.English])
+	mu_page_gematria_english.RUnlock()
+
+	mu_page_gematria_jewish.RLock()
+	gematria_pages.JewishPages = len(m_page_gematria_jewish[query_gem_score.Jewish])
+	mu_page_gematria_jewish.RUnlock()
+
+	mu_page_gematria_simple.RLock()
+	gematria_pages.SimplePages = len(m_page_gematria_simple[query_gem_score.Simple])
+	mu_page_gematria_simple.RUnlock()
+
+	template_vars["gematria_pages"] = gematria_pages
+
 	var htmlBuilder strings.Builder
-	if err := tmpl.Execute(&htmlBuilder, gin.H{
-		"title":             fmt.Sprintf("%v - Search Results", *flag_s_site_title),
-		"company":           *flag_s_site_company,
-		"domain":            *flag_s_primary_domain,
-		"active_searches":   human_int(int64(sem_concurrent_searches.Len())),
-		"i_active_searches": int64(sem_concurrent_searches.Len()),
-		"max_searches":      human_int(int64(*flag_i_concurrent_searches)),
-		"i_max_searches":    int64(*flag_i_concurrent_searches),
-		"in_waiting_room":   human_int(a_i_waiting_room.Load()),
-		"i_in_waiting_room": a_i_waiting_room.Load(),
-		"dark_mode":         gin_is_dark_mode(c),
-	}); err != nil {
+	if err := tmpl.Execute(&htmlBuilder, template_vars); err != nil {
 		c.String(http.StatusInternalServerError, "error executing template", err)
 		log.Println(err)
 		return
 	}
 	c.Header("Content-Type", "text/html; charset=UTF-8")
-	c.String(http.StatusOK, htmlBuilder.String())
+	c.String(http.StatusOK, htmlBuilder.String()) // serve html
+	// http.ServeContent(c.Writer, c.Request, "", time.Now(), bytes.NewReader(marshal)) // serve json
+	return
 }

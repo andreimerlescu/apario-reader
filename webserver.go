@@ -29,17 +29,19 @@ func NewWebServer(ctx context.Context) {
 		}()
 
 		gin_func_map = template.FuncMap{
-			"render_partial":       render_partial_template,
-			"render_document_card": render_document_card,
-			"render_page_card":     render_page_card,
-			"render_page_detail":   render_page_detail,
-			"plus":                 f_i_plus,
-			"minus":                f_i_minus,
-			"random_int":           f_i_random_int,
-			"sequence":             f_i_sequence,
-			"max":                  f_i_max,
-			"min":                  f_i_min,
-			"human_bytes":          f_s_human_bytes,
+			"render_partial":        render_partial_template,
+			"render_document_card":  render_document_card,
+			"render_page_card":      render_page_card,
+			"render_page_card_from": render_page_card_from,
+			"render_page_detail":    render_page_detail,
+			"plus":                  f_i_plus,
+			"minus":                 f_i_minus,
+			"random_int":            f_i_random_int,
+			"sequence":              f_i_sequence,
+			"max":                   f_i_max,
+			"min":                   f_i_min,
+			"human_bytes":           f_s_human_bytes,
+			"get_pg_id_from_doc_id_def_id_and_cur_pg_num": f_s_get_page_identifier_from_document_identifier_default_identifier_and_current_page_number,
 		}
 		default_gin_func_vars = gin.H{
 			"company": *flag_s_site_company,
@@ -118,7 +120,6 @@ func NewWebServer(ctx context.Context) {
 		// Routes
 		r.GET("/", r_get_index)
 		r.GET("/search", r_get_search)
-		r.GET("/search-results", r_get_search_results)
 		r.GET("/waiting-room", gin_get_waiting_room)
 		r.GET("/legal/community-standards", r_get_legal_community_standards)
 		r.GET("/legal/coppa", r_get_legal_coppa)

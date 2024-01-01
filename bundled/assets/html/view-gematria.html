@@ -10,8 +10,46 @@
         <div class="text-center">
             {{ render_partial "header" .dark_mode }}
         </div>
-        <div class="col-lg-6 mx-auto">
-            <p class="lead mb-4">Exploring Gematria</p>
+        {{ $outer := . }}
+        <div class="container">
+            {{ if or (eq .type "english") (eq .type "English") }}
+                <h1 class="lead mb-4">
+                    <span class="badge badge-primary m-2 p-1">{{ .s_score }}</span>
+                    English Gematria
+                </h1>
+                <div class="row row-cols-1 row-cols-sm-2 row-cols-md-4 g-4">
+                    {{ range $row := .english_results }}
+                        {{ render_page_card_from $row.Identifier $outer.dark_mode $outer.s_score }}
+                    {{ end }}
+                </div>
+                <hr>
+            {{ end }}
+
+            {{ if or (eq .type "jewish") (eq .type "Jewish") }}
+                <h1 class="lead mb-4">Jewish Gematria</h1>
+                {{ range $row := .jewish_results }}
+                <a href="{{ $row.URL }}" class='badge text-bg-{{ if eq $outer.dark_mode "1" }}light{{else}}dark{{end}} mx-2 mb-3 mt-1 p-1' title="Search {{ $row.Word }}">{{ $row.Word }} ({{ $row.Pages }} Pages)</a>
+                (
+                    <a href="/gematria/english/{{ $row.GemScore.English }}" target="_blank" title="Explore English {{ $row.GemScore.English }} Gematria">{{ $row.GemScore.English }} English</a>
+                    &middot;
+                    <a href="/gematia/simple/{{ $row.GemScore.Simple }}" target="_blank" title="Explore Simple {{ $row.GemScore.Simple }} Gematria">{{ $row.GemScore.Simple }} Simple</a>
+                )
+                {{ end }}
+                <hr>
+            {{ end }}
+
+            {{ if or (eq .type "simple") (eq .type "Simple") }}
+                <h1 class="lead mb-4">Simple Gematria</h1>
+                {{ range $row := .simple_results }}
+                <a href="{{ $row.URL }}" class='badge text-bg-{{ if eq $outer.dark_mode "1" }}light{{else}}dark{{end}} mx-2 mb-3 mt-1 p-1' title="Search {{ $row.Word }}">{{ $row.Word }} ({{ $row.Pages }} Pages)</a>
+                (
+                    <a href="/gematria/jewish/{{ $row.GemScore.Jewish }}" target="_blank" title="Explore Jewish {{ $row.GemScore.Jewish }} Gematria">{{ $row.GemScore.Jewish }} Jewish</a>
+                    &middot;
+                    <a href="/gematia/english/{{ $row.GemScore.English }}" target="_blank" title="Explore English {{ $row.GemScore.English }} Gematria">{{ $row.GemScore.English }} English</a>
+                )
+                {{ end }}
+                <hr>
+            {{ end }}
         </div>
         {{ render_partial "footer" .dark_mode }}
     </div>

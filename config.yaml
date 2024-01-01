@@ -19,6 +19,9 @@ csp-domains-csv: my.projectapario.com:8080,localhost:8080,my.projectapario.com:8
 company-name: Project Apario LLC
 primary-domain: idoread.com
 cookie-domain: dev.idoread.com
+search-algorithm: jarow_winkler
+search-threshold-jaro-winkler: 0.9
+search-jaro-winkler-boost-threshold: 0.3
 search-concurrency-buffer: 91604
 search-concurrency-limiter: 91604
 search-timeout-seconds: 30
@@ -26,3 +29,7 @@ concurrent-searches: 30
 concurrent-image-views: 1107
 concurrent-asset-requests: 1107
 concurrent-pdf-downloads: 369
+flush-database-watch-file: flush-db.next-boot
+persist-runtime-database: true
+load-persistent-database: true
+persistent-database-path: ./database/app.db
