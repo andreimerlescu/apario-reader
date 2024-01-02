@@ -1,6 +1,7 @@
 package main
 
 import (
+	`bytes`
 	`encoding/json`
 	`errors`
 	`fmt`
@@ -11,6 +12,7 @@ import (
 	`path/filepath`
 	`regexp`
 	`strings`
+	`time`
 
 	`github.com/gin-gonic/gin`
 )
@@ -34,6 +36,8 @@ func r_get_page(c *gin.Context) {
 		return
 	}
 	directory = resolvedPath
+
+	directory = strings.ReplaceAll(directory, filepath.Join(*flag_s_database, *flag_s_database), *flag_s_database)
 
 	log.Printf("using directory %v", directory)
 
@@ -96,7 +100,8 @@ func r_get_page(c *gin.Context) {
 		return
 	}
 
-	ocr_path := filepath.Join(".", directory, document_directory_name, "pages", fmt.Sprintf("ocr.%06d.txt", page_number))
+	ocr_path := filepath.Join(directory, document_directory_name, "pages", fmt.Sprintf("ocr.%06d.txt", page_number))
+	ocr_path = strings.ReplaceAll(ocr_path, filepath.Join(*flag_s_database, *flag_s_database), *flag_s_database)
 	ocr_bytes, ocr_err := os.ReadFile(ocr_path)
 	if ocr_err != nil {
 		log.Printf("failed to read the ocr_path %v due to error %v", ocr_path, ocr_err)
@@ -104,7 +109,8 @@ func r_get_page(c *gin.Context) {
 		return
 	}
 
-	document_pdf_path := filepath.Join(".", directory, document_directory_name, fmt.Sprintf("%v.pdf", template_vars["meta_record_number"]))
+	document_pdf_path := filepath.Join(directory, document_directory_name, fmt.Sprintf("%v.pdf", template_vars["meta_record_number"]))
+	document_pdf_path = strings.ReplaceAll(document_pdf_path, filepath.Join(*flag_s_database, *flag_s_database), *flag_s_database)
 	document_pdf_info, document_pdf_info_err := os.Stat(document_pdf_path)
 	if errors.Is(document_pdf_info_err, os.ErrNotExist) || errors.Is(document_pdf_info_err, os.ErrPermission) || document_pdf_info_err != nil {
 		log.Printf("failed to get the info about the document %v pdf path %v due to err %v", document_identifier, document_pdf_path, document_pdf_info_err)
@@ -112,7 +118,8 @@ func r_get_page(c *gin.Context) {
 		return
 	}
 
-	page_pdf_path := filepath.Join(".", directory, document_directory_name, "pages", fmt.Sprintf("%v_page_%d.pdf", template_vars["meta_record_number"], page_number))
+	page_pdf_path := filepath.Join(directory, document_directory_name, "pages", fmt.Sprintf("%v_page_%d.pdf", template_vars["meta_record_number"], page_number))
+	page_pdf_path = strings.ReplaceAll(page_pdf_path, filepath.Join(*flag_s_database, *flag_s_database), *flag_s_database)
 	page_pdf_info, page_pdf_info_err := os.Stat(page_pdf_path)
 	if errors.Is(page_pdf_info_err, os.ErrNotExist) || errors.Is(page_pdf_info_err, os.ErrPermission) || page_pdf_info_err != nil {
 		log.Printf("failed to get the info about the page %v pdf path %v due to err %v", page_identifier, page_pdf_path, page_pdf_info_err)
@@ -123,7 +130,8 @@ func r_get_page(c *gin.Context) {
 	template_vars["document_pdf_bytes"] = document_pdf_info.Size()
 	template_vars["page_pdf_bytes"] = page_pdf_info.Size()
 
-	page_data_path := filepath.Join(".", directory, document_directory_name, "pages", fmt.Sprintf("page.%06d.json", page_number))
+	page_data_path := filepath.Join(directory, document_directory_name, "pages", fmt.Sprintf("page.%06d.json", page_number))
+	page_data_path = strings.ReplaceAll(page_data_path, filepath.Join(*flag_s_database, *flag_s_database), *flag_s_database)
 	page_data_bytes, page_data_err := os.ReadFile(page_data_path)
 	if page_data_err != nil {
 		log.Printf("failed to read the pages JSON data due to error %v", page_data_err)
@@ -174,31 +182,73 @@ func r_get_download_page(c *gin.Context) {
 	defer sem_pdf_downloads.Release()
 	// TODO implement PDF downloads of a filename
 
-	data, err := bundled_files.ReadFile("bundled/assets/html/view-document.html")
-	if err != nil {
-		c.String(http.StatusInternalServerError, "Failed to load status.html")
+	directory := *flag_s_database
+	if len(directory) == 0 {
+		c.String(http.StatusNotFound, fmt.Sprintf("failed to load database %v", directory))
 		return
 	}
 
-	tmpl := template.Must(template.New("view-document").Funcs(gin_func_map).Parse(string(data)))
-
-	var htmlBuilder strings.Builder
-	if err := tmpl.Execute(&htmlBuilder, gin.H{
-		"title":             fmt.Sprintf("%v - View Document", *flag_s_site_title),
-		"company":           *flag_s_site_company,
-		"domain":            *flag_s_primary_domain,
-		"active_searches":   human_int(int64(sem_concurrent_searches.Len())),
-		"i_active_searches": int64(sem_concurrent_searches.Len()),
-		"max_searches":      human_int(int64(*flag_i_concurrent_searches)),
-		"i_max_searches":    int64(*flag_i_concurrent_searches),
-		"in_waiting_room":   human_int(a_i_waiting_room.Load()),
-		"i_in_waiting_room": a_i_waiting_room.Load(),
-		"dark_mode":         gin_is_dark_mode(c),
-	}); err != nil {
-		c.String(http.StatusInternalServerError, "error executing template", err)
-		log.Println(err)
+	resolvedPath, symlink_err := resolve_symlink(directory)
+	if symlink_err != nil {
+		c.String(http.StatusInternalServerError, fmt.Sprintf("failed to load %v", directory))
 		return
 	}
-	c.Header("Content-Type", "text/html; charset=UTF-8")
-	c.String(http.StatusOK, htmlBuilder.String())
+	directory = resolvedPath
+	directory = strings.ReplaceAll(directory, filepath.Join(*flag_s_database, *flag_s_database), *flag_s_database)
+	log.Printf("using directory %v", directory)
+
+	page_identifier := c.Param("page_identifier")
+	page_identifier = reg_identifier.ReplaceAllString(page_identifier, "") // sanitize input
+
+	mu_page_identifier_document.RLock()
+	document_identifier := m_page_identifier_document[page_identifier]
+	mu_page_identifier_document.RUnlock()
+
+	mu_page_identifier_page_number.RLock()
+	page_number := m_page_identifier_page_number[page_identifier]
+	mu_page_identifier_page_number.RUnlock()
+
+	filename := c.Param("filename")
+	if !reg_pdf_name.MatchString(filename) { // sanitize input
+		c.String(http.StatusForbidden, "invalid pdf %v", filename)
+		return
+	}
+
+	mu_document_identifier_directory.RLock()
+	document_directory, is_found := m_document_identifier_directory[document_identifier] // validate document_identifier
+	mu_document_identifier_directory.RUnlock()
+	if !is_found {
+		c.String(http.StatusInternalServerError, "failed to find %v directory checksum", document_identifier)
+		return
+	}
+
+	filename = strings.ReplaceAll(filename, ".pdf", "")
+	filename = fmt.Sprintf("%v_page_%d.pdf", filename, page_number)
+
+	pdf_path := filepath.Join(directory, document_directory, "pages", filename)
+	pdf_path = strings.ReplaceAll(pdf_path, filepath.Join(*flag_s_database, *flag_s_database), *flag_s_database)
+
+	image_info, stat_err := os.Stat(pdf_path)
+	if stat_err != nil {
+		log.Printf("failed to stat %v due to %v", pdf_path, stat_err)
+		c.String(http.StatusNotFound, "no such pdf")
+		return
+	}
+
+	if image_info.Size() == 0 {
+		log.Printf("failed to pass the .Size() > 0 check on %v due", pdf_path)
+		c.String(http.StatusInternalServerError, "failed to load pdf")
+		return
+	}
+
+	file_bytes, file_err := os.ReadFile(pdf_path)
+	if file_err != nil {
+		c.String(http.StatusInternalServerError, "failed to open %v due to %v", filename, file_err)
+		return
+	}
+
+	c.Header("Content-Type", "application/pdf")
+
+	modTime := time.Now()
+	http.ServeContent(c.Writer, c.Request, filename, modTime, bytes.NewReader(file_bytes))
 }

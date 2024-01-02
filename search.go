@@ -394,7 +394,6 @@ func find_pages_for_word(ctx context.Context, sch *go_smartchan.SmartChan, query
 			}
 		} else { // use jaro_winkler
 			distance = smetrics.JaroWinkler(query, word, *flag_f_search_jaro_winkler_boost_threshold, *flag_i_search_jaro_winkler_prefix_size)
-			log.Printf("received smetrics.JaroWinkler result for %v with distance of %f", query, distance)
 			if distance >= *flag_f_search_jaro_winkler_threshold {
 				for page_identifier, _ := range pages {
 					select {

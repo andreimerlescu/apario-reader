@@ -6,3 +6,7 @@ database/*
 !database/.keep
 logs/*
 !logs/.keep
+idoread.linux
+idoread
+idoread.windows.exe
+idoread.windows

@@ -2,7 +2,6 @@ package main
 
 import (
 	`bytes`
-	`errors`
 	`fmt`
 	`log`
 	`net/http`
@@ -125,6 +124,8 @@ func r_get_database_page_image(c *gin.Context) {
 		return
 	}
 	directory = resolvedPath
+	directory = strings.ReplaceAll(directory, filepath.Join(*flag_s_database, *flag_s_database), *flag_s_database)
+
 	log.Printf("using directory %v", directory)
 
 	document_identifier := c.Param("document_identifier")
@@ -174,10 +175,11 @@ func r_get_database_page_image(c *gin.Context) {
 	}
 
 	image_name := fmt.Sprintf("page.%v.%06d.%v", mode, page_number, size)
-	image_path := filepath.Join(".", directory, document_directory, "pages", image_name) // %v/%v/pages/
+	image_path := filepath.Join(directory, document_directory, "pages", image_name) // %v/%v/pages/
+	image_path = strings.ReplaceAll(image_path, filepath.Join(*flag_s_database, *flag_s_database), *flag_s_database)
 
 	image_info, stat_err := os.Stat(image_path)
-	if errors.Is(stat_err, os.ErrNotExist) || errors.Is(stat_err, os.ErrPermission) {
+	if stat_err != nil {
 		log.Printf("failed to stat %v due to %v", image_path, stat_err)
 		c.String(http.StatusNotFound, "no such cover")
 		return

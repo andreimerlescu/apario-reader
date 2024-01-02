@@ -20,6 +20,14 @@ func r_render_static(path string, c *gin.Context) (string, error) {
 
 	tmpl := template.Must(template.New(path).Funcs(gin_func_map).Parse(string(data)))
 
+	if a_i_total_documents.Load() == 0 {
+		a_i_total_documents.Store(int64(len(m_document_total_pages)))
+	}
+
+	if a_i_total_pages.Load() == 0 {
+		a_i_total_pages.Store(int64(len(m_page_identifier_document)))
+	}
+
 	var htmlBuilder strings.Builder
 	if err := tmpl.Execute(&htmlBuilder, gin.H{
 		"title":           *flag_s_site_title,

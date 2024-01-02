@@ -91,6 +91,12 @@ func NewWebServer(ctx context.Context) {
 			c.Next()
 		})
 
+		r.GET("/robots.txt", func(c *gin.Context) {
+			robotsContent := `User-agent: *
+Disallow: /`
+			c.Data(200, "text/plain", []byte(robotsContent))
+		})
+
 		// Respond to a basic ping
 		r.Any("/ping", func(c *gin.Context) {
 			c.JSON(http.StatusOK, gin.H{
@@ -126,6 +132,7 @@ func NewWebServer(ctx context.Context) {
 		r.GET("/legal/gdpr", r_get_legal_gdpr)
 		r.GET("/legal/privacy", r_get_legal_privacy_policy)
 		r.GET("/legal/terms", r_get_legal_terms)
+		r.GET("/legal/license", r_get_legal_license)
 		r.GET("/contact", r_get_contact_us)
 		r.GET("/status", r_get_status)
 		r.GET("/documents", r_get_documents)

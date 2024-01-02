@@ -55,3 +55,13 @@ func r_get_legal_terms(c *gin.Context) {
 	c.Header("Content-Type", "text/html; charset=UTF-8")
 	c.String(http.StatusOK, body)
 }
+
+func r_get_legal_license(c *gin.Context) {
+	body, err := r_render_static("legal-license", c)
+	if err != nil {
+		c.String(http.StatusInternalServerError, "Failed to load due to err: %v", err)
+		return
+	}
+	c.Header("Content-Type", "text/html; charset=UTF-8")
+	c.String(http.StatusOK, body)
+}

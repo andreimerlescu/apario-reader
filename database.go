@@ -12,6 +12,7 @@ import (
 	`path/filepath`
 	`strings`
 	`sync`
+	`time`
 )
 
 func database_load() error {
@@ -23,31 +24,70 @@ func database_load() error {
 	wg_active_tasks.Add(1)
 	defer wg_active_tasks.Done()
 
-	resolvedPath, symlink_err := resolve_symlink(directory)
-	if symlink_err != nil {
-		return symlink_err
+	log.Printf("database_load => directory = %v", directory)
+
+	if f_b_path_is_symlink(directory) {
+		resolvedPath, symlink_err := resolve_symlink(directory)
+		if symlink_err != nil {
+			return symlink_err
+		}
+		log.Printf("database_load => determined that directory is a symlink to %v", resolvedPath)
+		directory = resolvedPath
+		log.Printf("database_load => assigned directory = %v", directory)
 	}
-	directory = resolvedPath
 
-	log.Printf("using directory %v", directory)
+	log.Printf("database_load => using directory = %v\n", directory)
 
-	err := filepath.WalkDir(filepath.Join(".", directory, "."), func(path string, d fs.DirEntry, err error) error {
+	err := filepath.WalkDir(filepath.Join(directory, "."), func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
 
 		if d.IsDir() {
-			if strings.HasSuffix(path, "/pages") {
+			if strings.HasSuffix(path, string(filepath.Separator)+"pages") {
 				return nil
 			}
-			for {
-				if ch_db_directories.CanWrite() {
-					err := ch_db_directories.Write(path)
-					if err != nil {
-						return err
-					}
-					break
+			log.Printf("database_load => filepath.Walk() => sending path %v into the ch_db_directories channel", path)
+			timeout := time.NewTicker(30 * time.Second)
+
+			if f_b_path_is_symlink(path) {
+				log.Printf("path %v is a symlink ", path)
+				var err error
+				var new_path string
+				new_path, err = resolve_symlink(path)
+				if err != nil {
+					log.Printf("failed to resolve symblink %v with err %v", path, err)
+					return nil
 				}
+				path = new_path
+			}
+
+			document_record_filename := filepath.Join(path, "record.json")
+			document_record_info, info_err := os.Stat(document_record_filename)
+			if info_err != nil {
+				log.Printf("failed to find record.json inside the path %v therefore we are skipping", path)
+				return nil
+			}
+
+			if document_record_info.Size() == 0 {
+				log.Printf("the document_record_info.Size() == 0 for path %v", path)
+				return nil
+			}
+
+			for {
+				select {
+				case <-time.Tick(time.Second):
+					if ch_db_directories.CanWrite() {
+						err := ch_db_directories.Write(path)
+						if err != nil {
+							return err
+						}
+						return nil
+					}
+				case <-timeout.C:
+					return nil
+				}
+
 			}
 		}
 
@@ -103,9 +143,15 @@ func analyze_document_directory(path string) {
 
 	document_index := a_i_total_documents.Add(1)
 
+	log.Printf("working on analyze_document_directory(path = %v)", path)
+
+	path = strings.ReplaceAll(path, `mnt/volume_nyc3_01/stargate-tmp/mnt/volume_nyc3_01/stargate-tmp`, `mnt/volume_nyc3_01/stargate-tmp`)
+
+	log.Printf("checking path = %v", path)
+
 	bytes_json_record, record_json_err := os.ReadFile(filepath.Join(path, "record.json"))
 	if record_json_err != nil {
-		log.Printf("failed to read the file record.json due to %v", record_json_err)
+		log.Printf("failed to read the file record.json due to %v from path = %v/record.json", record_json_err, path)
 		return
 	}
 
@@ -473,9 +519,9 @@ func dump_database_to_disk() {
 	go write_payload_to_file("m_page_gematria_english.json", &wg, &mu_page_gematria_english, &m_page_gematria_english)
 	go write_payload_to_file("m_page_gematria_jewish.json", &wg, &mu_page_gematria_jewish, &m_page_gematria_jewish)
 	go write_payload_to_file("m_page_gematria_simple.json", &wg, &mu_page_gematria_simple, &m_page_gematria_simple)
-	go write_payload_to_file("m_location_cities.json", &wg, &mu_location_cities, &m_location_cities)
-	go write_payload_to_file("m_location_countries.json", &wg, &mu_location_countries, &m_location_countries)
-	go write_payload_to_file("m_location_states.json", &wg, &mu_location_states, &m_location_states)
+	//go write_payload_to_file("m_location_cities.json", &wg, &mu_location_cities, &m_location_cities)
+	//go write_payload_to_file("m_location_countries.json", &wg, &mu_location_countries, &m_location_countries)
+	//go write_payload_to_file("m_location_states.json", &wg, &mu_location_states, &m_location_states)
 	wg.Wait()
 	log.Println("finished writing database to disk")
 
@@ -506,9 +552,9 @@ func restore_database_from_disk() {
 	go load_file_into_payload("m_page_gematria_english.json", &wg, &mu_page_gematria_english, &m_page_gematria_english)
 	go load_file_into_payload("m_page_gematria_jewish.json", &wg, &mu_page_gematria_jewish, &m_page_gematria_jewish)
 	go load_file_into_payload("m_page_gematria_simple.json", &wg, &mu_page_gematria_simple, &m_page_gematria_simple)
-	go load_file_into_payload("m_location_cities.json", &wg, &mu_location_cities, &m_location_cities)
-	go load_file_into_payload("m_location_countries.json", &wg, &mu_location_countries, &m_location_countries)
-	go load_file_into_payload("m_location_states.json", &wg, &mu_location_states, &m_location_states)
+	//go load_file_into_payload("m_location_cities.json", &wg, &mu_location_cities, &m_location_cities)
+	//go load_file_into_payload("m_location_countries.json", &wg, &mu_location_countries, &m_location_countries)
+	//go load_file_into_payload("m_location_states.json", &wg, &mu_location_states, &m_location_states)
 	wg.Wait()
 	a_b_locations_loaded.Store(true)
 	a_i_total_documents.Store(int64(len(m_document_total_pages)))
@@ -520,7 +566,7 @@ func restore_database_from_disk() {
 func f_clear_db_restore_file() {
 	file := filepath.Join(".", *flag_s_flush_db_cache_watch_file)
 	flush_cache_file_info, flush_cache_file_err := os.Stat(file)
-	if errors.Is(os.ErrNotExist, flush_cache_file_err) || errors.Is(os.ErrPermission, flush_cache_file_err) {
+	if flush_cache_file_err != nil {
 		log.Printf("cannot remove the %v because it does not exist [%v]", file, flush_cache_file_err)
 		return // file not present
 	}
@@ -567,6 +613,20 @@ func f_b_db_flush_file_set() bool {
 	return false
 }
 
+func f_b_path_is_symlink(file string) bool {
+	flush_cache_file_info, flush_cache_file_err := os.Stat(file)
+	if flush_cache_file_err != nil {
+		return false // file not present
+	}
+	mode := flush_cache_file_info.Mode()
+
+	if (mode & os.ModeSymlink) != 0 {
+		return true
+	}
+
+	return false
+}
+
 func can_restore_database_from_disk() bool {
 	return *flag_b_load_persistent_runtime_database &&
 		f_b_path_exists(filepath.Join(*flag_s_persistent_database_file, "m_cryptonyms.json")) &&
@@ -587,10 +647,10 @@ func can_restore_database_from_disk() bool {
 		f_b_path_exists(filepath.Join(*flag_s_persistent_database_file, "m_document_identifier_cover_page_identifier.json")) &&
 		f_b_path_exists(filepath.Join(*flag_s_persistent_database_file, "m_page_gematria_english.json")) &&
 		f_b_path_exists(filepath.Join(*flag_s_persistent_database_file, "m_page_gematria_jewish.json")) &&
-		f_b_path_exists(filepath.Join(*flag_s_persistent_database_file, "m_page_gematria_simple.json")) &&
-		f_b_path_exists(filepath.Join(*flag_s_persistent_database_file, "m_location_cities.json")) &&
-		f_b_path_exists(filepath.Join(*flag_s_persistent_database_file, "m_location_countries.json")) &&
-		f_b_path_exists(filepath.Join(*flag_s_persistent_database_file, "m_location_states.json"))
+		f_b_path_exists(filepath.Join(*flag_s_persistent_database_file, "m_page_gematria_simple.json")) //&&
+	//f_b_path_exists(filepath.Join(*flag_s_persistent_database_file, "m_location_cities.json")) &&
+	//f_b_path_exists(filepath.Join(*flag_s_persistent_database_file, "m_location_countries.json")) &&
+	//f_b_path_exists(filepath.Join(*flag_s_persistent_database_file, "m_location_states.json"))
 }
 
 func f_b_path_exists(path string) bool {

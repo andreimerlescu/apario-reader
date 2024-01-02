@@ -184,6 +184,7 @@ var (
 	// Regular Expressions
 	reg_identifier = regexp.MustCompile("[^a-zA-Z0-9]+")
 	reg_image_size = regexp.MustCompile(`^[a-zA-Z0-9]+\.[a-zA-Z0-9]+$`)
+	reg_pdf_name   = regexp.MustCompile(`^[a-zA-Z0-9._-]+\.pdf$`)
 
 	// Semaphores
 	sem_db_directories      = sema.New(*flag_i_sem_directories)
