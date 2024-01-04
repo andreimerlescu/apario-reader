@@ -144,6 +144,7 @@ Disallow: /`
 		r.GET("/words", r_get_words)
 		r.GET("/word/:word", r_get_word)
 		r.GET("/stumbleinto", r_get_stumble_into)
+		r.GET("/StumbleInto", r_get_stumble_into)
 		r.GET("/dark", r_get_dark)
 		r.GET("/light", r_get_light)
 

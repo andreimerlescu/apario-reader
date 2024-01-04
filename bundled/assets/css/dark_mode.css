@@ -1,0 +1,36 @@
+.ce-toolbar__plus,
+.ce-toolbar__settings-btn {
+    color: aliceblue !important;
+}
+.ce-toolbar__settings-btn:hover,
+.ce-toolbar__plus:hover {
+    background-color: transparent !important;
+}
+.ce-inline-toolbar,
+.ce-conversion-toolbar {
+    background-color: #282856 !important;
+    color: #FAE2CB !important;
+}
+
+.ce-conversion-tool__icon {
+    background: none !important;
+}
+
+.ce-block__content,
+.ce-toolbar__content{
+    max-width: 90% !important;
+}
+
+.ce-inline-tool:hover,
+.ce-conversion-toolbar:hover,
+.ce-inline-toolbar__dropdown:hover,
+.ce-conversion-tool:hover {
+    background-color: #232362 !important;
+    color: #f1dbca !important;
+}
+
+.codex-editor ::selection,
+.cdx-marker {
+    background-color: #f1dbca !important;
+    color: #232362 !important;
+}

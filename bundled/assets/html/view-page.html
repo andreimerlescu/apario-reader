@@ -39,7 +39,67 @@
                 </div>
                 <h5 class="lead">Full Text</h5>
                 <hr>
-                {{ .full_text }}
+                <div id="editorjs"></div>
+                <button id="save-button">Save</button>
+                <pre id="output"></pre>
+
+                <script src="/assets/js/editorjs.2.28.2.js"></script>
+                <script src="/assets/js/editorjs.code.2.9.0.js"></script>
+                <script src="/assets/js/editorjs.header.2.8.1.js"></script>
+                <script src="/assets/js/editorjs.marker.1.4.0.js"></script>
+                <script src="/assets/js/editorjs.quote.2.6.0.js"></script>
+                <script src="/assets/js/editorjs.warning.1.4.0.js"></script>
+                <script>
+                    const editor = new EditorJS({
+                        autofocus: true,
+                        defaultBlock : 'text',
+                        tools: {
+                            code: {
+                                class:  CodeTool,
+                                shortcut: 'CMD+SHIFT+C'
+                            },
+                            header: {
+                                class: Header,
+                                inlineToolbar: ['marker', 'link'],
+                                config: {
+                                    placeholder: 'Header'
+                                },
+                                shortcut: 'CMD+SHIFT+H'
+                            },
+                            warning: Warning,
+                            quote: {
+                                class: Quote,
+                                inlineToolbar: true,
+                                config: {
+                                    quotePlaceholder: 'Enter a quote',
+                                    captionPlaceholder: 'Quote\'s author',
+                                },
+                                shortcut: 'CMD+SHIFT+O'
+                            },
+                            text: {
+                                class: Text,
+                                inlineToolbar : true,
+                            },
+                            Marker: {
+                                class: Marker,
+                                shortcut: 'CMD+SHIFT+M',
+                            }
+                        },
+                    {{ if eq .enhanced_full_text 1 }}
+                        data: {{ .full_text_json_data }}
+                    {{ end }}
+                    });
+
+                    const saveButton = document.getElementById('save-button');
+                    const output = document.getElementById('output');
+
+                    saveButton.addEventListener('click', () => {
+                        editor.save().then( savedData => {
+                            output.innerHTML = JSON.stringify(savedData, null, 4);
+                        })
+                    })
+                </script>
+
                 <h5 class="lead mt-4">Gematria</h5>
                 <hr>
                 <table class="table">

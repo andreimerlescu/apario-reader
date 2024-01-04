@@ -15,6 +15,8 @@ import (
 	`time`
 
 	`github.com/gin-gonic/gin`
+
+	`badbitchreads/editorjs`
 )
 
 func r_get_page(c *gin.Context) {
@@ -164,6 +166,15 @@ func r_get_page(c *gin.Context) {
 
 	template_vars["gematria"] = gematria
 	template_vars["full_text"] = template.HTML(ocr)
+	rawJson, json_err := editorjs.FromString(ocr)
+	if json_err != nil {
+		log.Printf("json.Marshal failed on ocr text for page %v with err %v", page_identifier, json_err)
+		template_vars["full_text_json_data"] = nil
+		template_vars["enhanced_full_text"] = 0
+	} else {
+		template_vars["full_text_json_data"] = template.JS(rawJson)
+		template_vars["enhanced_full_text"] = 1
+	}
 
 	tmpl := template.Must(template.New("view-page").Funcs(gin_func_map).Parse(string(data)))
 

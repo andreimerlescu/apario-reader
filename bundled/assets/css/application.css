@@ -13,3 +13,7 @@ a:visited {
 a:active {
     text-decoration: none;
 }
+
+.codex-editor__redactor {
+    padding-bottom: 10px !important;
+}
