@@ -13,10 +13,9 @@ import (
 	`sync/atomic`
 	`time`
 
+	sema `github.com/andreimerlescu/go-sema`
 	go_smartchan `github.com/andreimerlescu/go-smartchan`
 	`github.com/gin-gonic/gin`
-
-	`badbitchreads/sema`
 )
 
 func r_get_search(c *gin.Context) {

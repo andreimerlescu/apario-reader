@@ -176,6 +176,8 @@ func r_get_page(c *gin.Context) {
 		template_vars["enhanced_full_text"] = 1
 	}
 
+	template_vars["page_loading_svg_img_src"] = template.HTML(svg_page_loading_img_src)
+
 	tmpl := template.Must(template.New("view-page").Funcs(gin_func_map).Parse(string(data)))
 
 	var htmlBuilder strings.Builder

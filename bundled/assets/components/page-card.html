@@ -1,7 +1,7 @@
 <div class="col">
     <div class="card text-center mb-3">
         <a href='/page/{{.page_identifier}}{{ if ne .from "" }}?from={{.from}}{{ end }}' title="{{ .meta_title }}">
-            <img src="{{ .cover_medium }}" class="card-img-top lazyload" alt="{{ .meta_record_number }} - {{ .meta_title }}">
+            <img src="{{ .loading_svg_img_src }}" data-src="{{ .cover_medium }}" class="card-img-top lazyload" alt="{{ .meta_record_number }} - {{ .meta_title }}">
         </a>
         <div class="card-body">
             <small class="card-title fw-bolder">{{ .meta_record_number }}</small>

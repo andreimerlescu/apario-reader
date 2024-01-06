@@ -6,14 +6,14 @@
 </head>
 <body>
 <main>
-    <div class="px-4 py-5 my-5">
+    <div class="px-4 py-2 my-2">
         <div class="text-center">
             {{ render_partial "header" .dark_mode }}
         </div>
         {{ $outer := . }}
         <div class="row">
-            <div class="col-lg-6 col-sm-12 col-md-8">
-                <img src="{{.cover_large}}" class="lazyload img-fluid shadow-sm" alt="Page {{.page_number}} of {{.meta_record_number }}"/>
+            <div class="col-lg-6 col-sm-12 col-md-8 text-right">
+                <img src="{{ .page_loading_svg_img_src }}" data-src="{{.cover_large}}" class="lazyload img-fluid shadow-sm" alt="Page {{.page_number}} of {{.meta_record_number }}"/>
             </div>
             <div class="col-lg-6 col-sm-12 col-md-4">
                 <div class="px-4 py-4 text-center">
@@ -37,107 +37,92 @@
                         <a href="/page/{{ get_pg_id_from_doc_id_def_id_and_cur_pg_num .document_identifier .page_identifier .i_total_pages }}" class="btn btn-outline-primary {{ if eq .i_page .i_total_pages }}disabled{{ end }}">Last</a>
                     </div>
                 </div>
-                <h5 class="lead">Full Text</h5>
-                <hr>
-                <div id="editorjs"></div>
-                <button id="save-button">Save</button>
-                <pre id="output"></pre>
 
-                <script src="/assets/js/editorjs.2.28.2.js"></script>
-                <script src="/assets/js/editorjs.code.2.9.0.js"></script>
-                <script src="/assets/js/editorjs.header.2.8.1.js"></script>
-                <script src="/assets/js/editorjs.marker.1.4.0.js"></script>
-                <script src="/assets/js/editorjs.quote.2.6.0.js"></script>
-                <script src="/assets/js/editorjs.warning.1.4.0.js"></script>
-                <script>
-                    const editor = new EditorJS({
-                        autofocus: true,
-                        defaultBlock : 'text',
-                        tools: {
-                            code: {
-                                class:  CodeTool,
-                                shortcut: 'CMD+SHIFT+C'
-                            },
-                            header: {
-                                class: Header,
-                                inlineToolbar: ['marker', 'link'],
-                                config: {
-                                    placeholder: 'Header'
+
+                <!-- Nav tabs -->
+                <ul class="nav nav-tabs" id="myTab" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="ftn-tab" data-bs-toggle="tab" data-bs-target="#ftn" type="button" role="tab" aria-controls="ftn" aria-selected="true">Full Text Notepad</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="metadata-tab" data-bs-toggle="tab" data-bs-target="#metadata" type="button" role="tab" aria-controls="metadata" aria-selected="false">Metadata</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="gematria-tab" data-bs-toggle="tab" data-bs-target="#gematria" type="button" role="tab" aria-controls="gematria" aria-selected="false">Gematria</button>
+                    </li>
+                </ul>
+
+                <!-- Tab panes -->
+                <div class="tab-content">
+                    <div class="tab-pane active" id="ftn" role="tabpanel" aria-labelledby="ftn-tab" tabindex="0">
+                        <div id="editorjs"></div>
+                        <button id="save-button">Save</button>
+                        <pre id="output"></pre>
+
+                        <script src="/assets/js/editorjs.2.28.2.js"></script>
+                        <script src="/assets/js/editorjs.header.2.8.1.js"></script>
+                        <script src="/assets/js/editorjs.marker.1.4.0.js"></script>
+                        <script src="/assets/js/editorjs.nested-list.1.4.2.js"></script>
+                        <script>
+                            const editor = new EditorJS({
+                                holderId: "editorjs",
+                                tools: {
+                                    header: {
+                                        class: Header,
+                                        inlineToolbar: true,
+                                        config: {
+                                            placeholder: 'Header'
+                                        },
+                                    },
+                                    text: {
+                                        class: Text,
+                                        inlineToolbar : true,
+                                    },
+                                    list: {
+                                        class: NestedList,
+                                        inlineToolbar: true,
+                                        config: {
+                                            defaultStyle: 'unordered'
+                                        },
+                                    },
+                                    Marker: {
+                                        class: Marker,
+                                    }
                                 },
-                                shortcut: 'CMD+SHIFT+H'
-                            },
-                            warning: Warning,
-                            quote: {
-                                class: Quote,
-                                inlineToolbar: true,
-                                config: {
-                                    quotePlaceholder: 'Enter a quote',
-                                    captionPlaceholder: 'Quote\'s author',
-                                },
-                                shortcut: 'CMD+SHIFT+O'
-                            },
-                            text: {
-                                class: Text,
-                                inlineToolbar : true,
-                            },
-                            Marker: {
-                                class: Marker,
-                                shortcut: 'CMD+SHIFT+M',
-                            }
-                        },
-                    {{ if eq .enhanced_full_text 1 }}
-                        data: {{ .full_text_json_data }}
-                    {{ end }}
-                    });
+                            {{ if eq .enhanced_full_text 1 }}
+                            data: {{ .full_text_json_data }}
+                            {{ end }}
+                            });
 
-                    const saveButton = document.getElementById('save-button');
-                    const output = document.getElementById('output');
+                            const saveButton = document.getElementById('save-button');
+                            const output = document.getElementById('output');
 
-                    saveButton.addEventListener('click', () => {
-                        editor.save().then( savedData => {
-                            output.innerHTML = JSON.stringify(savedData, null, 4);
-                        })
-                    })
-                </script>
-
-                <h5 class="lead mt-4">Gematria</h5>
-                <hr>
-                <table class="table">
-                    <tr>
-                        <td>
-                            <b>English</b>:
-                            <a href="/gematria/english/{{ .gematria.English }}" title="Browse English Gematria {{ .gematria.English }}">{{ .gematria.English }}</a>
-                        </td>
-                        <td>
-                            <b>Jewish</b>:
-                            <a href="/gematria/jewish/{{ .gematria.Jewish }}" title="Browse Jewish Gematria {{ .gematria.Jewish }}">{{ .gematria.Jewish }}</a>
-                        </td>
-                        <td>
-                            <b>Simple</b>:
-                            <a href="/gematria/simple/{{ .gematria.Simple }}" title="Browse Simple Gematria {{ .gematria.Simple }}">{{ .gematria.Simple }}</a>
-                        </td>
-                    </tr>
-                </table>
-                <h5 class="lead mt-4">Metadata</h5>
-                <hr>
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th scope="col">Property</th>
-                            <th scope="col">Value</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {{ $outer := . }}
-                        {{ range $key, $value := .metadata }}
-                        <tr>
-                            <th scope="row">{{ $key }}</th>
-                            <td>
-                                {{ if eq $key "Source URL" }}
+                            saveButton.addEventListener('click', () => {
+                                editor.save().then( savedData => {
+                                    output.innerHTML = JSON.stringify(savedData, null, 3);
+                                })
+                            })
+                        </script>
+                    </div>
+                    <div class="tab-pane" id="metadata" role="tabpanel" aria-labelledby="metadata-tab" tabindex="0">
+                        <table class="table">
+                            <thead>
+                            <tr>
+                                <th scope="col">Property</th>
+                                <th scope="col">Value</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {{ $outer := . }}
+                            {{ range $key, $value := .metadata }}
+                            <tr>
+                                <th scope="row">{{ titleize $key }}</th>
+                                <td>
+                                    {{ if eq $key "Source URL" }}
                                     <a href="{{ $value }}" title="Access Source URL" target="_blank">{{ $value }}</a>
-                                {{ else if eq $key "title" }}
+                                    {{ else if eq $key "title" }}
                                     <a href='/document/{{ $outer.document_identifier }}{{ if ne $outer.from "" }}?from={{ $outer.from }}{{ end }}'>{{ $value }}</a>
-                                {{ else if eq $key "record_number" }}
+                                    {{ else if eq $key "record_number" }}
                                     <a href="/download/document/{{ $outer.document_identifier }}/{{ $value }}.pdf" title="Download {{ $value }}.pdf" target="_blank">
                                         Download Full OCR Document &#8599;
                                         ( {{ human_bytes $outer.document_pdf_bytes 3 }} )
@@ -147,15 +132,46 @@
                                         Download Page {{ $outer.page_number }} PDF &#8599;
                                         ( {{ human_bytes $outer.page_pdf_bytes 3 }} )
                                     </a>
-                                {{ else }}
+                                    {{ else }}
                                     {{ $value }}
-                                {{ end }}
-                            </td>
-                        </tr>
-                        {{ end }}
-                    </tbody>
-                </table>
-                <hr>
+                                    {{ end }}
+                                </td>
+                            </tr>
+                            {{ end }}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="tab-pane" id="gematria" role="tabpanel" aria-labelledby="gematria-tab" tabindex="0">
+                        <table class="table">
+                            <tr>
+                                <td>
+                                    <b>English</b>:
+                                    <a href="/gematria/english/{{ .gematria.English }}" title="Browse English Gematria {{ .gematria.English }}">{{ .gematria.English }}</a>
+                                </td>
+                                <td>
+                                    <b>Jewish</b>:
+                                    <a href="/gematria/jewish/{{ .gematria.Jewish }}" title="Browse Jewish Gematria {{ .gematria.Jewish }}">{{ .gematria.Jewish }}</a>
+                                </td>
+                                <td>
+                                    <b>Simple</b>:
+                                    <a href="/gematria/simple/{{ .gematria.Simple }}" title="Browse Simple Gematria {{ .gematria.Simple }}">{{ .gematria.Simple }}</a>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+
+                <script type="text/javascript">
+                const triggerTabList = document.querySelectorAll('#myTab button')
+                triggerTabList.forEach(triggerEl => {
+                  const tabTrigger = new bootstrap.Tab(triggerEl)
+                  triggerEl.addEventListener('click', event => {
+                        event.preventDefault()
+                        tabTrigger.show()
+                    })
+                })
+                </script>
+
             </div>
         </div>
         {{ render_partial "footer" .dark_mode }}

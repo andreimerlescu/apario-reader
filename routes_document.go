@@ -71,20 +71,21 @@ func r_get_documents(c *gin.Context) {
 
 	var htmlBuilder strings.Builder
 	if err := tmpl.Execute(&htmlBuilder, gin.H{
-		"title":             fmt.Sprintf("%v - All Documents", *flag_s_site_title),
-		"company":           *flag_s_site_company,
-		"domain":            *flag_s_primary_domain,
-		"page":              human_int(int64(page)),
-		"i_page":            page,
-		"limit":             human_int(int64(limit)),
-		"i_limit":           limit,
-		"total_documents":   human_int(int64(total_documents)),
-		"i_total_documents": total_documents,
-		"total_pages":       human_int(int64(total_pages)),
-		"i_total_pages":     total_pages,
-		"page_identifiers":  page_identifiers,
-		"dark_mode":         gin_is_dark_mode(c),
-		"from":              c.DefaultQuery("from", ""),
+		"title":                    fmt.Sprintf("%v - All Documents", *flag_s_site_title),
+		"company":                  *flag_s_site_company,
+		"domain":                   *flag_s_primary_domain,
+		"page":                     human_int(int64(page)),
+		"i_page":                   page,
+		"limit":                    human_int(int64(limit)),
+		"i_limit":                  limit,
+		"total_documents":          human_int(int64(total_documents)),
+		"i_total_documents":        total_documents,
+		"total_pages":              human_int(int64(total_pages)),
+		"i_total_pages":            total_pages,
+		"page_identifiers":         page_identifiers,
+		"dark_mode":                gin_is_dark_mode(c),
+		"from":                     c.DefaultQuery("from", ""),
+		"page_loading_svg_img_src": template.HTML(svg_page_loading_img_src),
 	}); err != nil {
 		c.String(http.StatusInternalServerError, "error executing template", err)
 		log.Println(err)
@@ -114,6 +115,8 @@ func r_get_view_document(c *gin.Context) {
 		"from":      c.DefaultQuery("from", ""),
 		"dark_mode": gin_is_dark_mode(c),
 	}
+
+	template_vars["page_loading_svg_img_src"] = template.HTML(svg_page_loading_img_src)
 
 	mu_document_metadata.RLock()
 	metadata := m_document_metadata[document_identifier]
@@ -156,6 +159,7 @@ func r_get_view_document(c *gin.Context) {
 	})
 
 	template_vars["pages"] = s_page_data
+	template_vars["page_loading_svg_img_src"] = template.HTML(svg_page_loading_img_src)
 
 	var htmlBuilder strings.Builder
 	if err := tmpl.Execute(&htmlBuilder, template_vars); err != nil {

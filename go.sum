@@ -2,6 +2,8 @@ github.com/andreimerlescu/configurable v0.0.8 h1:Y7wHgGhYZxGSEQ2Zx07PmVB0b6rJI0Y
 github.com/andreimerlescu/configurable v0.0.8/go.mod h1:lIL86PTLGv2CSZq5Wo3MCc8v9jVSNG5+l6rnjkeXcSg=
 github.com/andreimerlescu/go-countable-waitgroup v0.0.3 h1:xQH6KqhyE+3Dxmm1uAW+jXnuwI3O8SgXhfpEd3qhMwk=
 github.com/andreimerlescu/go-countable-waitgroup v0.0.3/go.mod h1:bnjdLlK27r5U6IZSxRaPcyfgCMqZu/KO5LQNNdwF3aU=
+github.com/andreimerlescu/go-sema v0.0.1 h1:+PijxhpaJXDDApRGnOOln23Cddb68T9+wkJtKFMcTuc=
+github.com/andreimerlescu/go-sema v0.0.1/go.mod h1:m7krZFMBkrhm0P/4vVLoeeqQMv0m9sC4r9HfjLGxA7k=
 github.com/andreimerlescu/go-smartchan v0.0.2 h1:i0IjJZ7e36eQW/SuqFuP8iFKknAbAj7hp9wmGyV2zyI=
 github.com/andreimerlescu/go-smartchan v0.0.2/go.mod h1:hwMuEGpMkRSybT+GQ+dTKey32nTqaFJfXbv3UK++T5A=
 github.com/bytedance/sonic v1.5.0/go.mod h1:ED5hyg4y6t3/9Ku1R6dU/4KyJ48DZ4jPhfY1O2AihPM=

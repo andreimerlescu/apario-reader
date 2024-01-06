@@ -42,10 +42,10 @@ func HTML(input string, options ...Options) string {
 			result = append(result, "---")
 
 		case "table":
-			result = append(result, markdown_gen_table(data))
+			result = append(result, markdown_gen_table(data)) // TODO: implement html_gen_table
 
 		case "caption":
-			result = append(result, markdown_gen_caption(data))
+			result = append(result, markdown_gen_caption(data)) // TODO: implement html_gen_caption
 
 		default:
 			log.Println("Unknown data type: " + el.Type)

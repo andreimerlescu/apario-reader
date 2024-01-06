@@ -68,6 +68,8 @@ func compile_partial_template(path string, dark_mode string) (template.HTML, err
 
 	existing_vars["is_dark_mode"] = dark_mode // override with argument value
 
+	existing_vars["loading_svg_img_src"] = template.HTML(svg_page_loading_img_src)
+
 	var htmlBuilder strings.Builder
 
 	mu_gin_func_vars.RLock()
@@ -161,6 +163,8 @@ func compile_page_card(page_identifier string, dark_mode string, parent_object s
 	for key, value := range metadata {
 		existing_vars["meta_"+key] = value
 	}
+
+	existing_vars["loading_svg_img_src"] = template.HTML(svg_page_loading_img_src)
 
 	existing_vars["cover_small"] = fmt.Sprintf("/covers/%v/%v/small.jpg", document_identifier, page_identifier)
 	existing_vars["cover_medium"] = fmt.Sprintf("/covers/%v/%v/medium.jpg", document_identifier, page_identifier)

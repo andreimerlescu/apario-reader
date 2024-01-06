@@ -41,6 +41,7 @@ func NewWebServer(ctx context.Context) {
 			"max":                   f_i_max,
 			"min":                   f_i_min,
 			"human_bytes":           f_s_human_bytes,
+			"titleize":              f_s_titleize,
 			"get_pg_id_from_doc_id_def_id_and_cur_pg_num": f_s_get_page_identifier_from_document_identifier_default_identifier_and_current_page_number,
 		}
 		default_gin_func_vars = gin.H{
