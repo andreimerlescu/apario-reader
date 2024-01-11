@@ -12,7 +12,6 @@ import (
 
 	"github.com/didip/tollbooth"
 	"github.com/didip/tollbooth/limiter"
-	"github.com/didip/tollbooth_gin"
 	"github.com/gin-gonic/gin"
 )
 
@@ -56,54 +55,64 @@ func NewWebServer(ctx context.Context) {
 		}
 
 		// Rate Limiting
-		defaultRateLimiter := tollbooth.NewLimiter(*flag_f_rate_limit, &limiter.ExpirableOptions{
-			DefaultExpirationTTL: time.Duration(*flag_i_rate_limit_entry_ttl) * time.Second,
-			ExpireJobInterval:    time.Duration(*flag_i_rate_limit_cleanup_delay) * time.Second,
-		})
+		var routeRateLimiter *limiter.Limiter
+		if *flag_b_enable_rate_limiting {
+			routeRateLimiter = tollbooth.NewLimiter(*flag_f_rate_limit, &limiter.ExpirableOptions{
+				DefaultExpirationTTL: time.Duration(*flag_i_rate_limit_entry_ttl) * time.Second,
+				ExpireJobInterval:    time.Duration(*flag_i_rate_limit_cleanup_delay) * time.Second,
+			})
+		}
 
-		assetRateLimiter := tollbooth.NewLimiter(*flag_f_asset_rate_limit, &limiter.ExpirableOptions{
-			DefaultExpirationTTL: time.Duration(*flag_i_asset_rate_limit_entry_ttl) * time.Second,
-			ExpireJobInterval:    time.Duration(*flag_i_asset_rate_limit_cleanup_delay) * time.Second,
-		})
+		var assetRateLimiter *limiter.Limiter
+		if *flag_b_enable_asset_rate_limiting {
+			assetRateLimiter = tollbooth.NewLimiter(*flag_f_asset_rate_limit, &limiter.ExpirableOptions{
+				DefaultExpirationTTL: time.Duration(*flag_i_asset_rate_limit_entry_ttl) * time.Second,
+				ExpireJobInterval:    time.Duration(*flag_i_asset_rate_limit_cleanup_delay) * time.Second,
+			})
+		}
+
+		var downloadRateLimiter *limiter.Limiter
+		if *flag_b_enable_downloads_rate_limiting {
+			downloadRateLimiter = tollbooth.NewLimiter(*flag_f_downloads_rate_limit, &limiter.ExpirableOptions{
+				DefaultExpirationTTL: time.Duration(*flag_i_downloads_rate_limit_entry_ttl) * time.Second,
+				ExpireJobInterval:    time.Duration(*flag_i_downloads_rate_limit_cleanup_delay) * time.Second,
+			})
+		}
 
 		// Web Server Configuration
 		r := gin.Default()
 
-		// Rate Limit
-		r.Use(tollbooth_gin.LimitHandler(defaultRateLimiter))
-
-		// Content Security Policy
+		// Middleware
+		if *flag_b_enable_tls_handshake_error_check {
+			r.Use(middleware_tls_handshake())
+		}
+		if *flag_b_enable_ip_ban_list {
+			r.Use(middleware_enforce_ip_ban_list())
+			go f_schedule_ip_ban_list_cleanup(ctx)
+		}
+		if *flag_b_enable_rate_limiting {
+			r.Use(middleware_rate_limiter(routeRateLimiter))
+		}
 		if *flag_b_enable_csp {
-			r.Use(middleware_content_security_policy)
+			r.Use(middleware_csp())
+		}
+		if *flag_b_enable_cors {
+			r.Use(middleware_cors())
 		}
 
-		// Cross Origin Resource Sharing (CORS)
-		r.Use(func(c *gin.Context) {
-			c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
-			c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-			c.Writer.Header().Set("Access-Control-Allow-Headers", "Origin, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
-			c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
+		// Special Routes
+		r.GET("/robots.txt", r_get_robots_txt)
+		if *flag_b_enable_ads_txt {
+			r.GET("/ads.txt", r_get_ads_txt)
+		}
 
-			if c.Request.Method == "OPTIONS" {
-				c.AbortWithStatus(http.StatusOK)
-				return
-			}
+		if *flag_b_enable_security_txt {
+			r.GET("/security.txt", r_get_security_txt)
+		}
 
-			c.Next()
-		})
-
-		r.GET("/robots.txt", func(c *gin.Context) {
-			robotsContent := `User-agent: *
-Disallow: /`
-			c.Data(200, "text/plain", []byte(robotsContent))
-		})
-
-		// Respond to a basic ping
-		r.Any("/ping", func(c *gin.Context) {
-			c.JSON(http.StatusOK, gin.H{
-				"message": "pong",
-			})
-		})
+		if *flag_b_enable_ping {
+			r.Any("/ping", r_get_ping)
+		}
 
 		// Content Security Policy
 		if *flag_b_enable_csp {
@@ -121,8 +130,13 @@ Disallow: /`
 		}
 
 		// Serve all static assets using this entry point
-		r.GET("/assets/:directory/:filename", tollbooth_gin.LimitHandler(assetRateLimiter), r_get_asset)
-		r.GET("/covers/:document_identifier/:page_identifier/:size", tollbooth_gin.LimitHandler(assetRateLimiter), r_get_database_page_image)
+		if *flag_b_enable_asset_rate_limiting {
+			r.GET("/assets/:directory/:filename", middleware_rate_limiter(assetRateLimiter), r_get_asset)
+		} else {
+			r.GET("/assets/:directory/:filename", r_get_asset)
+		}
+
+		r.GET("/covers/:document_identifier/:page_identifier/:size", middleware_rate_limiter(assetRateLimiter), r_get_database_page_image)
 
 		// Routes
 		r.GET("/", r_get_index)
@@ -138,8 +152,14 @@ Disallow: /`
 		r.GET("/status", r_get_status)
 		r.GET("/documents", r_get_documents)
 		r.GET("/document/:identifier", r_get_view_document)
-		r.GET("/download/document/:document_identifier/:filename", r_get_download_document)
-		r.GET("/download/page/:page_identifier/:filename", r_get_download_page)
+		if *flag_b_enable_downloads_rate_limiting {
+			r.GET("/download/document/:document_identifier/:filename", middleware_rate_limiter(downloadRateLimiter), r_get_download_document)
+			r.GET("/download/page/:page_identifier/:filename", middleware_rate_limiter(downloadRateLimiter), r_get_download_page)
+		} else {
+			r.GET("/download/document/:document_identifier/:filename", r_get_download_document)
+			r.GET("/download/page/:page_identifier/:filename", r_get_download_page)
+		}
+
 		r.GET("/gematria/:type/:number", r_get_gematria)
 		r.GET("/page/:identifier", r_get_page)
 		r.GET("/words", r_get_words)
@@ -148,6 +168,8 @@ Disallow: /`
 		r.GET("/StumbleInto", r_get_stumble_into)
 		r.GET("/dark", r_get_dark)
 		r.GET("/light", r_get_light)
+
+		r.NoRoute(handler_no_route_linter())
 
 		// Start HTTP Server
 		go func(r *gin.Engine) {

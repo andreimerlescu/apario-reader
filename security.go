@@ -1,0 +1,133 @@
+package main
+
+import (
+	`context`
+	`log`
+	`net`
+	`sync`
+	`sync/atomic`
+	`time`
+)
+
+func f_patch_server_with_banned_ip(ip net.IP) {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Println("Recovered from panic:", r)
+		}
+	}()
+	sem_banned_ip_patch.Acquire()
+	defer sem_banned_ip_patch.Release()
+	// TODO: add the option to use firewall-cmd, ufw or iptables to block the IP address from the server with a comment
+	log.Printf("need to patch the server with banning the ip %v", ip)
+}
+
+func f_add_ip_to_ban_list(ip net.IP) {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Println("Recovered from panic:", r)
+		}
+	}()
+	mu_ip_ban_list.Lock()
+	defer mu_ip_ban_list.Unlock()
+
+	m_ip_ban_list = append(m_ip_ban_list, ip)
+	go f_patch_server_with_banned_ip(ip)
+}
+
+func f_add_ip_to_watch_list(ip net.IP) {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Println("Recovered from panic:", r)
+		}
+	}()
+	mu_ip_watch_list.RLock()
+	counter, found := m_ip_watch_list[ip.String()]
+	mu_ip_watch_list.RUnlock()
+	if !found {
+		mu_ip_watch_list.Lock()
+		m_ip_watch_list[ip.String()] = &atomic.Int64{}
+		counter = m_ip_watch_list[ip.String()]
+		mu_ip_watch_list.Unlock()
+	}
+	new_count := counter.Add(1)
+
+	if new_count >= 6 {
+		f_add_ip_to_ban_list(ip)
+	}
+}
+
+func f_ip_in_ban_list(ip net.IP) bool {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Println("Recovered from panic:", r)
+		}
+	}()
+	mu_ip_ban_list.RLock()
+	defer mu_ip_ban_list.RUnlock()
+
+	for _, banned_ip := range m_ip_ban_list {
+		if ip.Equal(banned_ip) {
+			return true
+		}
+	}
+	return false
+}
+
+func f_schedule_ip_ban_list_cleanup(ctx context.Context) {
+	ticker := time.NewTicker(time.Duration(*flag_i_ip_ban_list_synchronization) * time.Second)
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			var results ts_ip_save
+			mu_ip_ban_list.RLock()
+			ips := m_ip_ban_list
+			mu_ip_ban_list.RUnlock()
+			for _, ip := range ips {
+				if len(results.Entries) == 0 || results.Entries == nil {
+					results.mu = &sync.RWMutex{}
+					breakFor := atomic.Bool{}
+					tryLockCount := atomic.Int64{}
+					breakFor.Store(false)
+					for {
+						select {
+						case <-ctx.Done():
+							breakFor.Store(true)
+							break
+						case <-time.Tick(10 * time.Millisecond):
+							count := tryLockCount.Add(1)
+							if count < 17 && !breakFor.Load() && results.mu.TryLock() { // max 170ms to unlock
+								results.mu.Lock()
+								results.Entries = make(map[string]ts_ip_save_entry)
+								results.mu.Unlock()
+								breakFor.Store(true)
+								break
+							}
+						}
+						if breakFor.Load() {
+							break
+						}
+					}
+
+				}
+				mu_ip_watch_list.RLock()
+				counter, found := m_ip_watch_list[ip.String()]
+				mu_ip_watch_list.RUnlock()
+				if !found {
+					mu_ip_watch_list.Lock()
+					m_ip_watch_list[ip.String()] = &atomic.Int64{}
+					counter = m_ip_watch_list[ip.String()]
+					mu_ip_watch_list.Unlock()
+				}
+				results.mu.Lock()
+				results.Entries[ip.String()] = ts_ip_save_entry{
+					IP:      ip,
+					Counter: counter.Load(),
+				}
+				results.mu.Unlock()
+			}
+
+		}
+	}
+}

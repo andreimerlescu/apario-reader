@@ -1,10 +1,59 @@
 package main
 
 import (
+	`net`
+	`net/http`
 	"strings"
 
+	`github.com/didip/tollbooth/limiter`
+	`github.com/didip/tollbooth_gin`
 	"github.com/gin-gonic/gin"
 )
+
+func middleware_cors() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var allow_creds string
+		if *flag_s_cors_allow_credentials == true {
+			allow_creds = "true"
+		} else {
+			allow_creds = "false"
+		}
+		c.Writer.Header().Set("Access-Control-Allow-Origin", *flag_s_cors_allow_origin)
+		c.Writer.Header().Set("Access-Control-Allow-Methods", *flag_s_cors_allow_methods)
+		c.Writer.Header().Set("Access-Control-Allow-Headers", *flag_s_cors_allow_headers)
+		c.Writer.Header().Set("Access-Control-Allow-Credentials", allow_creds)
+
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(http.StatusOK)
+			return
+		}
+
+		c.Next()
+	}
+}
+
+func middleware_csp() gin.HandlerFunc {
+	return middleware_content_security_policy
+}
+
+func middleware_rate_limiter(lim *limiter.Limiter) gin.HandlerFunc {
+	return tollbooth_gin.LimitHandler(lim)
+}
+
+func middleware_tls_handshake() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// Check if the client's TLS handshake is misconfigured
+		if c.Request.TLS != nil && c.Request.TLS.HandshakeComplete == false {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "TLS handshake misconfiguration",
+			})
+			c.Abort()
+			return
+		}
+
+		c.Next()
+	}
+}
 
 func middleware_content_security_policy(c *gin.Context) {
 	// List of 1st party domains
@@ -100,4 +149,15 @@ func middleware_content_security_policy(c *gin.Context) {
 
 	// Process the next Gin middleware
 	c.Next()
+}
+
+func middleware_enforce_ip_ban_list() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		ip := net.ParseIP(f_s_client_ip(c.Request))
+		if f_ip_in_ban_list(ip) {
+			c.AbortWithStatus(http.StatusForbidden)
+			return
+		}
+		c.Next()
+	}
 }

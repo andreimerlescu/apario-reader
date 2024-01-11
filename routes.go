@@ -4,7 +4,9 @@ import (
 	`fmt`
 	`html/template`
 	`log`
+	`net`
 	`net/http`
+	`os`
 	`strconv`
 	`strings`
 
@@ -41,6 +43,117 @@ func r_render_static(path string, c *gin.Context) (string, error) {
 		return "", fmt.Errorf("error executing template: %v", err)
 	}
 	return htmlBuilder.String(), nil
+}
+
+func r_get_ping(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{
+		"message": "pong",
+	})
+}
+
+func r_get_robots_txt(c *gin.Context) {
+	var contents []byte
+	path := *flag_s_robots_txt_path
+	if len(path) > 0 {
+		file_bytes, file_err := os.ReadFile(path)
+		if file_err != nil {
+			log.Printf("/robots.txt served - failed to load path %v due to err %v", path, file_err)
+			contents = []byte(c_s_default_robots_txt)
+		} else {
+			contents = file_bytes
+			file_bytes = []byte{} // flush this out of memory early
+		}
+	} else {
+		contents = []byte(c_s_default_robots_txt)
+	}
+	c.Data(http.StatusOK, "text/plain", contents)
+}
+
+func r_get_ads_txt(c *gin.Context) {
+	var contents []byte
+	path := *flag_s_ads_txt_path
+	if len(path) > 0 {
+		file_bytes, file_err := os.ReadFile(path)
+		if file_err != nil {
+			log.Printf("/ads.txt served - failed to load path %v due to err %v", path, file_err)
+			contents = []byte(c_s_default_ads_txt)
+		} else {
+			contents = file_bytes
+			file_bytes = []byte{} // flush this out of memory early
+		}
+	} else {
+		contents = []byte(c_s_default_ads_txt)
+	}
+	c.Data(http.StatusOK, "text/plain", contents)
+}
+
+func r_get_security_txt(c *gin.Context) {
+	var contents []byte
+	path := *flag_s_security_txt_path
+	if len(path) > 0 {
+		file_bytes, file_err := os.ReadFile(path)
+		if file_err != nil {
+			log.Printf("/security.txt served - failed to load path %v due to err %v", path, file_err)
+			contents = []byte(c_s_default_security_txt)
+		} else {
+			contents = file_bytes
+			file_bytes = []byte{} // flush this out of memory early
+		}
+	} else {
+		contents = []byte(c_s_default_security_txt)
+	}
+	c.Data(http.StatusOK, "text/plain", contents)
+}
+
+func handler_no_route_linter() gin.HandlerFunc {
+	return r_any_no_route_linter
+}
+
+func r_any_no_route_linter(c *gin.Context) {
+	requestedURL := c.Request.URL.Path
+
+	var endpoint_is []string
+	if len(*flag_s_no_route_path_watch_list) > 2 {
+		endpoint_is = strings.Split(*flag_s_no_route_path_watch_list, "|")
+	}
+
+	var endpoint_contains []string
+	if len(*flag_s_no_route_path_contains_watch_list) > 2 {
+		endpoint_contains = strings.Split(*flag_s_no_route_path_contains_watch_list, "|")
+	}
+
+	ip_str := f_s_client_ip(c.Request)
+	ip := net.ParseIP(ip_str)
+	if ip == nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"message": "The truth can never be concealed forever.",
+		})
+		return
+	}
+
+	if f_ip_in_ban_list(ip) {
+		c.Data(http.StatusForbidden, "text/plain", []byte("403"))
+		return
+	}
+
+	for _, endpoint := range endpoint_is {
+		if requestedURL == endpoint {
+			f_add_ip_to_watch_list(ip)
+			c.Data(http.StatusNotFound, "text/plain", []byte("404"))
+			return
+		}
+	}
+
+	for _, endpoint := range endpoint_contains {
+		if strings.Contains(requestedURL, endpoint) {
+			f_add_ip_to_watch_list(ip)
+			c.Data(http.StatusNotFound, "text/plain", []byte("404"))
+			return
+		}
+	}
+
+	c.Data(http.StatusNotFound, "text/plain", []byte("404"))
+	return
 }
 
 func r_get_index(c *gin.Context) {

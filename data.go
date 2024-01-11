@@ -26,6 +26,8 @@ import (
 	"image/color"
 	`math`
 	`math/big`
+	`net`
+	`net/http`
 	`regexp`
 	`strings`
 	`sync`
@@ -163,6 +165,13 @@ var (
 	re_date4 = regexp.MustCompile(`(?i)(January|Jan|February|Feb|March|Mar|April|Apr|May|June|Jun|July|Jul|August|Aug|September|Sep|October|Oct|November|Nov|December|Dec)\s(\d{4})`)
 	re_date6 = regexp.MustCompile(`(\d{4})`)
 
+	// Security
+	mu_ip_watch_list    = &sync.RWMutex{}
+	m_ip_watch_list     = map[string]*atomic.Int64{}
+	mu_ip_ban_list      = &sync.RWMutex{}
+	m_ip_ban_list       []net.IP
+	sem_banned_ip_patch = sema.New(1)
+
 	// Synchronization
 	wg_active_tasks   = cwg.CountableWaitGroup{}
 	mu_cert           = &sync.RWMutex{}
@@ -213,6 +222,15 @@ var (
 	gin_func_vars    map[string]gin.H
 	mu_gin_func_vars = sync.RWMutex{}
 )
+
+type ts_ip_save_entry struct {
+	IP      net.IP
+	Counter int64
+}
+type ts_ip_save struct {
+	Entries map[string]ts_ip_save_entry
+	mu      *sync.RWMutex
+}
 
 type SearchResult struct {
 	Query    string         `json:"query"`
@@ -410,6 +428,26 @@ const (
 	terabyte = 1024 * gigabyte
 	petabyte = 1024 * terabyte
 )
+
+const c_s_default_robots_txt = `User-agent: *
+Disallow: /`
+
+const c_s_default_ads_txt = ``
+
+const c_s_default_security_txt = ``
+
+func f_s_client_ip(r *http.Request) string {
+	headers := []string{"X-Real-IP", "X-Forwarded-For"}
+
+	for _, header := range headers {
+		clientIP := r.Header.Get(header)
+		if clientIP != "" {
+			return clientIP
+		}
+	}
+
+	return r.RemoteAddr
+}
 
 func f_s_titleize(input string) string {
 	input = strings.ReplaceAll(input, `_`, ` `)

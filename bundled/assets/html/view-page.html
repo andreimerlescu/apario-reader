@@ -42,10 +42,10 @@
                 <!-- Nav tabs -->
                 <ul class="nav nav-tabs" id="myTab" role="tablist">
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link active" id="ftn-tab" data-bs-toggle="tab" data-bs-target="#ftn" type="button" role="tab" aria-controls="ftn" aria-selected="true">Full Text Notepad</button>
+                        <button class="nav-link" id="metadata-tab" data-bs-toggle="tab" data-bs-target="#metadata" type="button" role="tab" aria-controls="metadata" aria-selected="true">Metadata</button>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="metadata-tab" data-bs-toggle="tab" data-bs-target="#metadata" type="button" role="tab" aria-controls="metadata" aria-selected="false">Metadata</button>
+                        <button class="nav-link active" id="ftn-tab" data-bs-toggle="tab" data-bs-target="#ftn" type="button" role="tab" aria-controls="ftn" aria-selected="false">Full Text Notepad</button>
                     </li>
                     <li class="nav-item" role="presentation">
                         <button class="nav-link" id="gematria-tab" data-bs-toggle="tab" data-bs-target="#gematria" type="button" role="tab" aria-controls="gematria" aria-selected="false">Gematria</button>
@@ -54,7 +54,46 @@
 
                 <!-- Tab panes -->
                 <div class="tab-content">
-                    <div class="tab-pane active" id="ftn" role="tabpanel" aria-labelledby="ftn-tab" tabindex="0">
+                    <!-- first tab -->
+                    <div class="tab-pane active" id="metadata" role="tabpanel" aria-labelledby="metadata-tab" tabindex="0">
+                        <table class="table">
+                            <thead>
+                            <tr>
+                                <th scope="col">Property</th>
+                                <th scope="col">Value</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {{ $outer := . }}
+                            {{ range $key, $value := .metadata }}
+                            <tr>
+                                <th scope="row">{{ titleize $key }}</th>
+                                <td>
+                                    {{ if eq $key "Source URL" }}
+                                    <a href="{{ $value }}" title="Access Source URL" target="_blank">{{ $value }}</a>
+                                    {{ else if eq $key "title" }}
+                                    <a href='/document/{{ $outer.document_identifier }}{{ if ne $outer.from "" }}?from={{ $outer.from }}{{ end }}'>{{ $value }}</a>
+                                    {{ else if eq $key "record_number" }}
+                                    <a href="/download/document/{{ $outer.document_identifier }}/{{ $value }}.pdf" title="Download {{ $value }}.pdf" target="_blank">
+                                        Download Full OCR Document &#8599;
+                                        ( {{ human_bytes $outer.document_pdf_bytes 3 }} )
+                                    </a>
+                                    &middot;
+                                    <a href="/download/page/{{ $outer.page_identifier }}/{{ $value }}.pdf" title="Download Page {{ $outer.page_number }} of {{ $outer.document_pages }} - {{ $value }}.pdf" target="_blank">
+                                        Download Page {{ $outer.page_number }} PDF &#8599;
+                                        ( {{ human_bytes $outer.page_pdf_bytes 3 }} )
+                                    </a>
+                                    {{ else }}
+                                    {{ $value }}
+                                    {{ end }}
+                                </td>
+                            </tr>
+                            {{ end }}
+                            </tbody>
+                        </table>
+                    </div>
+                    <!-- second tab -->
+                    <div class="tab-pane" id="ftn" role="tabpanel" aria-labelledby="ftn-tab" tabindex="0">
                         <div id="editorjs"></div>
                         <button id="save-button">Save</button>
                         <pre id="output"></pre>
@@ -104,43 +143,7 @@
                             })
                         </script>
                     </div>
-                    <div class="tab-pane" id="metadata" role="tabpanel" aria-labelledby="metadata-tab" tabindex="0">
-                        <table class="table">
-                            <thead>
-                            <tr>
-                                <th scope="col">Property</th>
-                                <th scope="col">Value</th>
-                            </tr>
-                            </thead>
-                            <tbody>
-                            {{ $outer := . }}
-                            {{ range $key, $value := .metadata }}
-                            <tr>
-                                <th scope="row">{{ titleize $key }}</th>
-                                <td>
-                                    {{ if eq $key "Source URL" }}
-                                    <a href="{{ $value }}" title="Access Source URL" target="_blank">{{ $value }}</a>
-                                    {{ else if eq $key "title" }}
-                                    <a href='/document/{{ $outer.document_identifier }}{{ if ne $outer.from "" }}?from={{ $outer.from }}{{ end }}'>{{ $value }}</a>
-                                    {{ else if eq $key "record_number" }}
-                                    <a href="/download/document/{{ $outer.document_identifier }}/{{ $value }}.pdf" title="Download {{ $value }}.pdf" target="_blank">
-                                        Download Full OCR Document &#8599;
-                                        ( {{ human_bytes $outer.document_pdf_bytes 3 }} )
-                                    </a>
-                                    &middot;
-                                    <a href="/download/page/{{ $outer.page_identifier }}/{{ $value }}.pdf" title="Download Page {{ $outer.page_number }} of {{ $outer.document_pages }} - {{ $value }}.pdf" target="_blank">
-                                        Download Page {{ $outer.page_number }} PDF &#8599;
-                                        ( {{ human_bytes $outer.page_pdf_bytes 3 }} )
-                                    </a>
-                                    {{ else }}
-                                    {{ $value }}
-                                    {{ end }}
-                                </td>
-                            </tr>
-                            {{ end }}
-                            </tbody>
-                        </table>
-                    </div>
+                    <!-- third panel -->
                     <div class="tab-pane" id="gematria" role="tabpanel" aria-labelledby="gematria-tab" tabindex="0">
                         <table class="table">
                             <tr>

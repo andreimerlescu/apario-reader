@@ -39,23 +39,23 @@
             </p>
             <div class="text-center">
                 <div class="btn-group mb-4" role="group" aria-label="Pagination">
-                    <a href='?query={{.from }}&page=1&limit={{ .i_limit }}{{ if ne .from "" }}?from={{.from}}{{ end }}' class="btn btn-outline-primary {{ if eq .i_page 1 }}disabled{{ end }}">First</a>
-                    <a href='?query={{.from }}&page={{ minus .i_page 1 }}&limit={{ .i_limit }}{{ if ne .from "" }}?from={{.from}}{{ end }}' class="btn btn-outline-primary {{ if eq .i_page 1 }}disabled{{ end }}">Previous</a>
+                    <a href='?query={{.from }}&page=1&limit={{ .i_limit }}{{ if ne .from "" }}&from={{.from}}{{ end }}' class="btn btn-outline-primary {{ if eq .i_page 1 }}disabled{{ end }}">First</a>
+                    <a href='?query={{.from }}&page={{ minus .i_page 1 }}&limit={{ .i_limit }}{{ if ne .from "" }}&from={{.from}}{{ end }}' class="btn btn-outline-primary {{ if eq .i_page 1 }}disabled{{ end }}">Previous</a>
 
                     {{ if gt (minus .i_page 3) 1 }}
                     <span class="btn btn-outline-primary disabled">...</span>
                     {{ end }}
 
                     {{ range $i := sequence (max 1 (minus .i_page 3)) (min .total_result_pages (plus .i_page 3)) }}
-                    <a href='?query={{$outer.from }}&page={{ $i }}&limit={{ $outer.i_limit }}{{ if ne $outer.from "" }}?from={{ $outer.from }}{{ end }}' class="btn btn-outline-primary {{ if eq $outer.i_page $i }}disabled{{ end }}">{{ $i }}</a>
+                    <a href='?query={{$outer.from }}&page={{ $i }}&limit={{ $outer.i_limit }}{{ if ne $outer.from "" }}&from={{ $outer.from }}{{ end }}' class="btn btn-outline-primary {{ if eq $outer.i_page $i }}disabled{{ end }}">{{ $i }}</a>
                     {{ end }}
 
                     {{ if lt (plus .i_page 3) .total_result_pages }}
                     <span class="btn btn-outline-primary disabled">...</span>
                     {{ end }}
 
-                    <a href='?query={{.from }}&page={{ plus .i_page 1 }}&limit={{ .i_limit }}{{ if ne .from "" }}?from={{.from}}{{ end }}' class="btn btn-outline-primary {{ if eq .i_page .total_result_pages }}disabled{{ end }}">Next</a>
-                    <a href='?query={{.from }}&page={{ .total_result_pages }}&limit={{ .i_limit }}{{ if ne .from "" }}?from={{.from}}{{ end }}' class="btn btn-outline-primary {{ if eq .i_page .total_result_pages }}disabled{{ end }}">Last</a>
+                    <a href='?query={{.from }}&page={{ plus .i_page 1 }}&limit={{ .i_limit }}{{ if ne .from "" }}&from={{.from}}{{ end }}' class="btn btn-outline-primary {{ if eq .i_page .total_result_pages }}disabled{{ end }}">Next</a>
+                    <a href='?query={{.from }}&page={{ .total_result_pages }}&limit={{ .i_limit }}{{ if ne .from "" }}&from={{.from}}{{ end }}' class="btn btn-outline-primary {{ if eq .i_page .total_result_pages }}disabled{{ end }}">Last</a>
                 </div>
             </div>
 
@@ -71,44 +71,44 @@
 
             <div class="text-center">
                 <div class="btn-group mb-4" role="group" aria-label="Pagination">
-                    <a href='?query={{.from }}&page=1&limit={{ .i_limit }}{{ if ne .from "" }}?from={{.from}}{{ end }}' class="btn btn-outline-primary {{ if eq .i_page 1 }}disabled{{ end }}">First</a>
-                    <a href='?query={{.from }}&page={{ minus .i_page 1 }}&limit={{ .i_limit }}{{ if ne .from "" }}?from={{.from}}{{ end }}' class="btn btn-outline-primary {{ if eq .i_page 1 }}disabled{{ end }}">Previous</a>
+                    <a href='?query={{.from }}&page=1&limit={{ .i_limit }}{{ if ne .from "" }}&from={{.from}}{{ end }}' class="btn btn-outline-primary {{ if eq .i_page 1 }}disabled{{ end }}">First</a>
+                    <a href='?query={{.from }}&page={{ minus .i_page 1 }}&limit={{ .i_limit }}{{ if ne .from "" }}&from={{.from}}{{ end }}' class="btn btn-outline-primary {{ if eq .i_page 1 }}disabled{{ end }}">Previous</a>
 
                     {{ if gt (minus .i_page 3) 1 }}
                     <span class="btn btn-outline-primary disabled">...</span>
                     {{ end }}
 
                     {{ range $i := sequence (max 1 (minus .i_page 3)) (min .total_result_pages (plus .i_page 3)) }}
-                    <a href='?query={{$outer.from }}&page={{ $i }}&limit={{ $outer.i_limit }}{{ if ne $outer.from "" }}?from={{ $outer.from }}{{ end }}' class="btn btn-outline-primary {{ if eq $outer.i_page $i }}disabled{{ end }}">{{ $i }}</a>
+                    <a href='?query={{$outer.from }}&page={{ $i }}&limit={{ $outer.i_limit }}{{ if ne $outer.from "" }}&from={{ $outer.from }}{{ end }}' class="btn btn-outline-primary {{ if eq $outer.i_page $i }}disabled{{ end }}">{{ $i }}</a>
                     {{ end }}
 
                     {{ if lt (plus .i_page 3) .total_result_pages }}
                     <span class="btn btn-outline-primary disabled">...</span>
                     {{ end }}
 
-                    <a href='?query={{.from }}&page={{ plus .i_page 1 }}&limit={{ .i_limit }}{{ if ne .from "" }}?from={{.from}}{{ end }}' class="btn btn-outline-primary {{ if eq .i_page .total_result_pages }}disabled{{ end }}">Next</a>
-                    <a href='?query={{.from }}&page={{ .total_result_pages }}&limit={{ .i_limit }}{{ if ne .from "" }}?from={{.from}}{{ end }}' class="btn btn-outline-primary {{ if eq .i_page .total_result_pages }}disabled{{ end }}">Last</a>
+                    <a href='?query={{.from }}&page={{ plus .i_page 1 }}&limit={{ .i_limit }}{{ if ne .from "" }}&from={{.from}}{{ end }}' class="btn btn-outline-primary {{ if eq .i_page .total_result_pages }}disabled{{ end }}">Next</a>
+                    <a href='?query={{.from }}&page={{ .total_result_pages }}&limit={{ .i_limit }}{{ if ne .from "" }}&from={{.from}}{{ end }}' class="btn btn-outline-primary {{ if eq .i_page .total_result_pages }}disabled{{ end }}">Last</a>
                 </div>
             </div>
 
             <div class="mt-2 text-center">
                 Page {{ .s_page }} of {{ .s_total_result_pages }}
                 &dash;
-                <a href='?query={{.from }}&page={{ .i_page }}&limit=12{{ if ne .from "" }}?from={{.from}}{{ end }}' class="{{ if eq .i_limit 12 }}fw-bolder{{else}}fw-light{{end}}" title="12 Results Per Page">12</a>
+                <a href='?query={{.from }}&page={{ .i_page }}&limit=12{{ if ne .from "" }}&from={{.from}}{{ end }}' class="{{ if eq .i_limit 12 }}fw-bolder{{else}}fw-light{{end}}" title="12 Results Per Page">12</a>
                 &#47;
-                <a href='?query={{.from }}&page={{ .i_page }}&limit=17{{ if ne .from "" }}?from={{.from}}{{ end }}'  class="{{ if eq .i_limit 17 }}fw-bolder{{else}}fw-light{{end}}" title="17 Results Per Page">17</a>
+                <a href='?query={{.from }}&page={{ .i_page }}&limit=17{{ if ne .from "" }}&from={{.from}}{{ end }}'  class="{{ if eq .i_limit 17 }}fw-bolder{{else}}fw-light{{end}}" title="17 Results Per Page">17</a>
                 &#47;
-                <a href='?query={{.from }}&page={{ .i_page }}&limit=33{{ if ne .from "" }}?from={{.from}}{{ end }}'  class="{{ if eq .i_limit 33 }}fw-bolder{{else}}fw-light{{end}}" title="33 Results Per Page">33</a>
+                <a href='?query={{.from }}&page={{ .i_page }}&limit=33{{ if ne .from "" }}&from={{.from}}{{ end }}'  class="{{ if eq .i_limit 33 }}fw-bolder{{else}}fw-light{{end}}" title="33 Results Per Page">33</a>
                 &#47;
-                <a href='?query={{.from }}&page={{ .i_page }}&limit=45{{ if ne .from "" }}?from={{.from}}{{ end }}'  class="{{ if eq .i_limit 45 }}fw-bolder{{else}}fw-light{{end}}" title="45 Results Per Page">45</a>
+                <a href='?query={{.from }}&page={{ .i_page }}&limit=45{{ if ne .from "" }}&from={{.from}}{{ end }}'  class="{{ if eq .i_limit 45 }}fw-bolder{{else}}fw-light{{end}}" title="45 Results Per Page">45</a>
                 &#47;
-                <a href='?query={{.from }}&page={{ .i_page }}&limit=47{{ if ne .from "" }}?from={{.from}}{{ end }}'  class="{{ if eq .i_limit 47 }}fw-bolder{{else}}fw-light{{end}}" title="47 Results Per Page">47</a>
+                <a href='?query={{.from }}&page={{ .i_page }}&limit=47{{ if ne .from "" }}&from={{.from}}{{ end }}'  class="{{ if eq .i_limit 47 }}fw-bolder{{else}}fw-light{{end}}" title="47 Results Per Page">47</a>
                 &#47;
-                <a href='?query={{.from }}&page={{ .i_page }}&limit=63{{ if ne .from "" }}?from={{.from}}{{ end }}'  class="{{ if eq .i_limit 63 }}fw-bolder{{else}}fw-light{{end}}" title="63 Results Per Page">63</a>
+                <a href='?query={{.from }}&page={{ .i_page }}&limit=63{{ if ne .from "" }}&from={{.from}}{{ end }}'  class="{{ if eq .i_limit 63 }}fw-bolder{{else}}fw-light{{end}}" title="63 Results Per Page">63</a>
                 &#47;
-                <a href='?query={{.from }}&page={{ .i_page }}&limit=72{{ if ne .from "" }}?from={{.from}}{{ end }}'  class="{{ if eq .i_limit 72 }}fw-bolder{{else}}fw-light{{end}}" title="72 Results Per Page">72</a>
+                <a href='?query={{.from }}&page={{ .i_page }}&limit=72{{ if ne .from "" }}&from={{.from}}{{ end }}'  class="{{ if eq .i_limit 72 }}fw-bolder{{else}}fw-light{{end}}" title="72 Results Per Page">72</a>
                 &#47;
-                <a href='?query={{.from }}&page={{ .i_page }}&limit=144{{ if ne .from "" }}?from={{.from}}{{ end }}'  class="{{ if eq .i_limit 144 }}fw-bolder{{else}}fw-light{{end}}" title="144 Results Per Page">144</a>
+                <a href='?query={{.from }}&page={{ .i_page }}&limit=144{{ if ne .from "" }}&from={{.from}}{{ end }}'  class="{{ if eq .i_limit 144 }}fw-bolder{{else}}fw-light{{end}}" title="144 Results Per Page">144</a>
                 &dash;
                 Total Results: {{ .s_total_matching_page_identifiers }}
             </div>

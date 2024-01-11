@@ -33,3 +33,5 @@ flush-database-watch-file: flush-db.next-boot
 persist-runtime-database: true
 load-persistent-database: true
 persistent-database-path: ./database/app.db
+no-route-path-watch-list: ""
+no-route-path-contains-watch-list: ""
