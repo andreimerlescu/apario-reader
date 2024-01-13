@@ -8,7 +8,7 @@
 <main>
     <div class="px-4 py-2 my-2">
         <div class="text-center">
-            {{ render_partial "header" .dark_mode }}
+            {{ render_partial "header_full" .dark_mode }}
         </div>
         {{ $outer := . }}
         <div class="row">
@@ -16,8 +16,8 @@
                 <img src="{{ .page_loading_svg_img_src }}" data-src="{{.cover_large}}" class="lazyload img-fluid shadow-sm" alt="Page {{.page_number}} of {{.meta_record_number }}"/>
             </div>
             <div class="col-lg-6 col-sm-12 col-md-4">
-                <div class="px-4 py-4 text-center">
-                    <div class="btn-group mb-4" role="group" aria-label="Pagination">
+                <div class="p-2 text-center">
+                    <div class="btn-group mb-1" role="group" aria-label="Pagination">
                         <a href="/page/{{ get_pg_id_from_doc_id_def_id_and_cur_pg_num .document_identifier .page_identifier 1 }}" class="btn btn-outline-primary {{ if eq .i_page 1 }}disabled{{ end }}">First</a>
                         <a href="/page/{{ get_pg_id_from_doc_id_def_id_and_cur_pg_num .document_identifier .page_identifier ( minus .i_page 1 ) }}" class="btn btn-outline-primary {{ if eq .i_page 1 }}disabled{{ end }}">Previous</a>
 
@@ -25,7 +25,7 @@
                         <span class="btn btn-outline-primary disabled">...</span>
                         {{ end }}
 
-                        {{ range $i := sequence (max 1 (minus .i_page 6)) (min .i_total_pages (plus .i_page 6)) }}
+                        {{ range $i := sequence (max 1 (minus .i_page 3)) (min .i_total_pages (plus .i_page 3)) }}
                         <a href="/page/{{ get_pg_id_from_doc_id_def_id_and_cur_pg_num $outer.document_identifier $outer.page_identifier $i }}" class="btn btn-outline-primary {{ if eq $outer.i_page $i }}disabled{{ end }}">{{ $i }}</a>
                         {{ end }}
 
@@ -37,15 +37,29 @@
                         <a href="/page/{{ get_pg_id_from_doc_id_def_id_and_cur_pg_num .document_identifier .page_identifier .i_total_pages }}" class="btn btn-outline-primary {{ if eq .i_page .i_total_pages }}disabled{{ end }}">Last</a>
                     </div>
                 </div>
+                <script src="/assets/js/mousetrap.1.6.5.min.js" type="text/javascript"></script>
+                <script type="text/javascript">
+                    Mousetrap.bind('right', function(){ window.location = "/page/{{ get_pg_id_from_doc_id_def_id_and_cur_pg_num .document_identifier .page_identifier ( plus .i_page 1 ) }}"}, 'keyup');
+                    Mousetrap.bind('left', function (){ window.location = "/page/{{ get_pg_id_from_doc_id_def_id_and_cur_pg_num .document_identifier .page_identifier ( minus .i_page 1 ) }}"}, 'keyup')
+                    Mousetrap.bind("f p enter", function() { window.location = "/page/{{ get_pg_id_from_doc_id_def_id_and_cur_pg_num .document_identifier .page_identifier 1 }}"}, "keyup")
+                    Mousetrap.bind("l p enter", function (){ window.location = "/page/{{ get_pg_id_from_doc_id_def_id_and_cur_pg_num .document_identifier .page_identifier .i_total_pages }}"}, "keyup")
+                </script>
+                <div class="text-center">
+                    <small class="mb-3">
+                        <attr title="right arrow key">&nbsp;right&nbsp;</attr> and <attr title="left arrow key">&nbsp;left&nbsp;</attr> arrow keys will go to next and previous pages. <br>
+                        <attr title="f as in First">&nbsp;f&nbsp;</attr> <attr title="p as in Page">&nbsp;p&nbsp;</attr> <attr title="enter or return key">&nbsp;enter&nbsp;</attr> takes you to page 1.<br>
+                        <attr title="l as in Last">&nbsp;l&nbsp;</attr> <attr title="p as in Page">&nbsp;p&nbsp;</attr> <attr title="enter or return key">&nbsp;enter&nbsp;</attr> takes you to page {{ .i_total_pages }}.
+                    </small>
+                </div>
 
 
                 <!-- Nav tabs -->
                 <ul class="nav nav-tabs" id="myTab" role="tablist">
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="metadata-tab" data-bs-toggle="tab" data-bs-target="#metadata" type="button" role="tab" aria-controls="metadata" aria-selected="true">Metadata</button>
+                        <button class="nav-link active" id="metadata-tab" data-bs-toggle="tab" data-bs-target="#metadata" type="button" role="tab" aria-controls="metadata" aria-selected="true">Metadata</button>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link active" id="ftn-tab" data-bs-toggle="tab" data-bs-target="#ftn" type="button" role="tab" aria-controls="ftn" aria-selected="false">Full Text Notepad</button>
+                        <button class="nav-link" id="ftn-tab" data-bs-toggle="tab" data-bs-target="#ftn" type="button" role="tab" aria-controls="ftn" aria-selected="false">Full Text Notepad</button>
                     </li>
                     <li class="nav-item" role="presentation">
                         <button class="nav-link" id="gematria-tab" data-bs-toggle="tab" data-bs-target="#gematria" type="button" role="tab" aria-controls="gematria" aria-selected="false">Gematria</button>

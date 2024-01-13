@@ -1,9 +1,12 @@
 package main
 
 import (
+	`log`
 	`net`
 	`net/http`
 	"strings"
+	`sync/atomic`
+	`time`
 
 	`github.com/didip/tollbooth/limiter`
 	`github.com/didip/tollbooth_gin`
@@ -32,12 +35,62 @@ func middleware_cors() gin.HandlerFunc {
 	}
 }
 
+func middleware_database_loading() gin.HandlerFunc {
+	return middleware_wait_for_database
+}
+
+func middleware_wait_for_database(c *gin.Context) {
+	if !a_b_database_loaded.Load() {
+		c.AbortWithStatusJSON(http.StatusNotAcceptable, map[string]string{"error": "Please wait for the application to boot."})
+	}
+	c.Next()
+}
+
 func middleware_csp() gin.HandlerFunc {
 	return middleware_content_security_policy
 }
 
 func middleware_rate_limiter(lim *limiter.Limiter) gin.HandlerFunc {
 	return tollbooth_gin.LimitHandler(lim)
+}
+
+func middleware_online_counter() gin.HandlerFunc {
+	return middleware_activate_online_counter
+}
+
+func middleware_activate_online_counter(c *gin.Context) {
+	ip := f_s_filtered_ip(c)
+	mu_online_list.RLock()
+	entry, exists := m_online_list[ip]
+	mu_online_list.RUnlock()
+	if !exists {
+		mu_online_list.Lock()
+		m_online_list[ip] = online_entry{
+			UserAgent:     c.Request.Header.Get("User-Agent"),
+			IP:            net.IP(ip),
+			FirstAction:   time.Now().UTC(),
+			LastAction:    time.Now().UTC(),
+			Hits:          &atomic.Int64{},
+			LastPath:      c.Request.URL.Path,
+			Authenticated: false,
+			Administrator: false,
+			Username:      "",
+			Reputation:    0,
+		}
+		mu_online_list.Unlock()
+		c.Next()
+		return
+	}
+
+	entry.Hits.Add(1)
+	entry.LastPath = c.Request.URL.Path
+	entry.LastAction = time.Now().UTC()
+	entry.UserAgent = c.Request.Header.Get("User-Agent")
+
+	mu_online_list.Lock()
+	m_online_list[ip] = entry
+	mu_online_list.Unlock()
+	c.Next()
 }
 
 func middleware_tls_handshake() gin.HandlerFunc {
@@ -153,8 +206,14 @@ func middleware_content_security_policy(c *gin.Context) {
 
 func middleware_enforce_ip_ban_list() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		ip := net.ParseIP(f_s_client_ip(c.Request))
-		if f_ip_in_ban_list(ip) {
+		ip := f_s_filtered_ip(c)
+		if len(ip) == 0 {
+			log.Printf("invalid ip address detected")
+			c.AbortWithStatus(http.StatusInternalServerError)
+			return
+		}
+
+		if f_ip_in_ban_list(net.ParseIP(ip)) {
 			c.AbortWithStatus(http.StatusForbidden)
 			return
 		}

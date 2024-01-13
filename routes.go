@@ -122,23 +122,22 @@ func r_any_no_route_linter(c *gin.Context) {
 		endpoint_contains = strings.Split(*flag_s_no_route_path_contains_watch_list, "|")
 	}
 
-	ip_str := f_s_client_ip(c.Request)
-	ip := net.ParseIP(ip_str)
-	if ip == nil {
-		c.JSON(http.StatusNotFound, gin.H{
-			"message": "The truth can never be concealed forever.",
-		})
+	ip := f_s_filtered_ip(c)
+	if len(ip) == 0 {
+		c.Data(http.StatusNotFound, "text/plain", []byte("The truth can never be concealed forever."))
 		return
 	}
 
-	if f_ip_in_ban_list(ip) {
+	nip := net.ParseIP(ip)
+
+	if f_ip_in_ban_list(nip) {
 		c.Data(http.StatusForbidden, "text/plain", []byte("403"))
 		return
 	}
 
 	for _, endpoint := range endpoint_is {
 		if requestedURL == endpoint {
-			f_add_ip_to_watch_list(ip)
+			f_add_ip_to_watch_list(nip)
 			c.Data(http.StatusNotFound, "text/plain", []byte("404"))
 			return
 		}
@@ -146,7 +145,7 @@ func r_any_no_route_linter(c *gin.Context) {
 
 	for _, endpoint := range endpoint_contains {
 		if strings.Contains(requestedURL, endpoint) {
-			f_add_ip_to_watch_list(ip)
+			f_add_ip_to_watch_list(nip)
 			c.Data(http.StatusNotFound, "text/plain", []byte("404"))
 			return
 		}

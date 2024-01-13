@@ -1,0 +1,23 @@
+<a href="/?from=logo" title="{{ .title }}" id="header-logo-link">
+    <img class="d-block mx-auto mb-2" id="header-logo-img" src='/assets/images/idoread_logo2024-{{ if eq .is_dark_mode "1" }}dark{{else}}light{{end}}.png' alt="{{ .title }}" data-dark-mode="{{ .is_dark_mode }}"/>
+</a>
+<div class="mb-2">
+    <a href="/" title="Home" id="home-link">Home</a>
+    &middot;
+    <a href="/documents" title="All Documents" id="all-documents-link">Documents</a>
+    &middot;
+    <a href="/StumbleInto" title="StumbleInto" id="stumbleinto-link">StumbleInto</a>
+    &middot;
+    <a href="/status" title="Status" id="status-link">Status</a>
+</div>
+<div class="row mb-2">
+    <form action="/search" method="get">
+        <div class="input-group">
+            <span class="input-group-text" id="query-label">Full Text Search:</span>
+            <input type="text" class="form-control" placeholder="Search Query" name="query" id="query" aria-label="Input Search Query" aria-describedby="query-label">
+            <button class="btn btn-primary" type="submit" id="search-button">Search</button>
+            <label for="is-bot" id="is-bot-label" class="d-none">Captcha:</label><input type="checkbox" checked name="is-bot" id="is-bot" class="d-none">
+            <a href="/StumbleInto" title="StumbleInto" id="stumble-into-button" class="btn btn-success btn-lg input-group-text">StumbleInto</a>
+        </div>
+    </form>
+</div>

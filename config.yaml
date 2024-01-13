@@ -1,5 +1,5 @@
 ---
-database: "database/stargate"
+database: "/Users/araven/Documents/code/projects/go-badbitchreads/stargate-tmp"
 buffer: 3301
 limit: 3301
 directories-limiter: 369
@@ -31,7 +31,5 @@ concurrent-asset-requests: 1107
 concurrent-pdf-downloads: 369
 flush-database-watch-file: flush-db.next-boot
 persist-runtime-database: true
-load-persistent-database: true
+load-persistent-database: false
 persistent-database-path: ./database/app.db
-no-route-path-watch-list: ""
-no-route-path-contains-watch-list: ""

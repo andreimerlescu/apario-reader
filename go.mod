@@ -5,7 +5,10 @@ go 1.21
 require (
 	github.com/andreimerlescu/configurable v0.0.8
 	github.com/andreimerlescu/go-countable-waitgroup v0.0.3
+	github.com/andreimerlescu/go-gematria v0.0.2
+	github.com/andreimerlescu/go-sema v0.0.1
 	github.com/andreimerlescu/go-smartchan v0.0.2
+	github.com/andreimerlescu/go-textee v0.0.1
 	github.com/didip/tollbooth v4.0.2+incompatible
 	github.com/didip/tollbooth_gin v0.0.0-20170928041415-5752492be505
 	github.com/gin-contrib/sessions v0.0.5
@@ -18,10 +21,10 @@ require (
 	github.com/xrash/smetrics v0.0.0-20231213231151-1d8dd44e695e
 	github.com/youmark/pkcs8 v0.0.0-20201027041543-1326539a0a0a
 	golang.org/x/crypto v0.17.0
+	golang.org/x/text v0.14.0
 )
 
 require (
-	github.com/andreimerlescu/go-sema v0.0.1 // indirect
 	github.com/bytedance/sonic v1.10.2 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/chenzhuoyu/base64x v0.0.0-20230717121745-296ad89f973d // indirect
@@ -53,7 +56,6 @@ require (
 	golang.org/x/arch v0.6.0 // indirect
 	golang.org/x/net v0.19.0 // indirect
 	golang.org/x/sys v0.15.0 // indirect
-	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
 	google.golang.org/protobuf v1.31.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect

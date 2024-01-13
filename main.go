@@ -121,42 +121,41 @@ func main() {
 		f_clear_db_restore_file()
 	}
 
-	if can_restore_database_from_disk() {
+	if !*flag_b_load_persistent_runtime_database && can_restore_database_from_disk() {
 		log.Printf("restore cache db from disk")
 		restore_database_from_disk()
 	}
 
-	if !*flag_b_load_persistent_runtime_database {
-		log.Printf("loading cache db into memory")
-		go process_directories(ch_db_directories.Chan())
-		defer ch_db_directories.Close()
+	log.Printf("loading cache db into memory")
+	go process_directories(ch_db_directories)
+	defer ch_db_directories.Close()
 
-		go bundled_load_cryptonyms()
+	go bundled_load_cryptonyms()
 
-		//go func() {
-		//	wg_active_tasks.Add(1)
-		//	defer wg_active_tasks.Done()
-		//
-		//	locationsCsvErr := bundled_load_locations(ctx, processLocation)
-		//	if locationsCsvErr != nil {
-		//		log.Printf("received an error while loading the locations: %v", locationsCsvErr) // a problem habbened
-		//		return
-		//	}
-		//
-		//	a_b_locations_loaded.Store(true)
-		//}()
+	//go func() {
+	//	wg_active_tasks.Add(1)
+	//	defer wg_active_tasks.Done()
+	//
+	//	locationsCsvErr := bundled_load_locations(ctx, processLocation)
+	//	if locationsCsvErr != nil {
+	//		log.Printf("received an error while loading the locations: %v", locationsCsvErr) // a problem habbened
+	//		return
+	//	}
+	//
+	//	a_b_locations_loaded.Store(true)
+	//}()
 
-		err := database_load()
-		if err != nil {
-			slog.Error("failed to load the database with error %v", err)
-			return
-		}
-		log.Printf("waiting for wg_active_tasks to be done!")
-		wg_active_tasks.Wait()
-		log.Printf("wg_active_tasks has completed!")
-		if *flag_b_persist_runtime_database {
-			go dump_database_to_disk()
-		}
+	err := database_load()
+	if err != nil {
+		slog.Error("failed to load the database with error %v", err)
+		return
+	}
+	log.Printf("waiting for wg_active_tasks to be done!")
+	wg_active_tasks.Wait()
+	a_b_database_loaded.Store(true)
+	log.Printf("wg_active_tasks has completed!")
+	if *flag_b_persist_runtime_database {
+		dump_database_to_disk()
 	}
 
 	slog.Info("done loading the application's database into memory")

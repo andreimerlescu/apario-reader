@@ -3,6 +3,8 @@ package main
 import (
 	`bytes`
 	`fmt`
+	`io`
+	`io/fs`
 	`log`
 	`net/http`
 	`os`
@@ -13,60 +15,52 @@ import (
 	`github.com/gin-gonic/gin`
 )
 
-func r_get_icon(c *gin.Context) {
-	sem_asset_requests.Acquire()
-	defer sem_asset_requests.Release()
-
-	name := c.Param("name")
-
-	filePath := fmt.Sprintf("bundled/assets/icons/%v", name)
-
-	fileData, err := bundled_files.ReadFile(filePath)
-	if err != nil {
-		c.String(http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	switch {
-	case strings.HasSuffix(name, ".js"):
-		c.Header("Content-Type", "text/javascript")
-	case strings.HasSuffix(name, ".css"):
-		c.Header("Content-Type", "text/css")
-	case strings.HasSuffix(name, ".woff"):
-		c.Header("Content-Type", "font/woff")
-	case strings.HasSuffix(name, ".woff2"):
-		c.Header("Content-Type", "font/woff2")
-	case strings.HasSuffix(name, ".ico"):
-		c.Header("Content-Type", "image/x-icon")
-	case strings.HasSuffix(name, ".jpg"):
-		c.Header("Content-Type", "image/jpeg")
-	case strings.HasSuffix(name, ".png"):
-		c.Header("Content-Type", "image/png")
-	case strings.HasSuffix(name, ".svg"):
-		c.Header("Content-Type", "image/svg+xml")
-	default:
-		c.String(http.StatusInternalServerError, "unsupported image type")
-		return
-	}
-
-	modTime := time.Now()
-	http.ServeContent(c.Writer, c.Request, "", modTime, bytes.NewReader(fileData))
-}
-
 func r_get_asset(c *gin.Context) {
 	sem_asset_requests.Acquire()
 	defer sem_asset_requests.Release()
+
+	defer func(c *gin.Context) {
+		if r := recover(); r != nil {
+			fmt.Println("Recovered from panic:", r)
+			c.AbortWithStatus(http.StatusInternalServerError)
+			return
+		}
+	}(c)
 
 	directory := c.Param("directory")
 	filename := c.Param("filename")
 	filePath := fmt.Sprintf("bundled/assets/%v/%v", directory, filename)
 
-	fileData, err := bundled_files.ReadFile(filePath)
-	if err != nil {
-		c.String(http.StatusInternalServerError, err.Error())
+	file, file_err := bundled_files.Open(filePath)
+	defer func(filePath string, file fs.File) { // ensure the file handler is closed
+		err := file.Close()
+		if err != nil { // handle the close error if applicable
+			log.Printf("failed to close r_get_asset file %v due to err %v", filePath, err)
+			return
+		}
+	}(filePath, file) // pass in the filePath and the file into the defer func
+
+	if file_err != nil { // received an err on the file
+		log.Printf("received an err on r_get_asset bundled_files.Open(%v) with err %v", filePath, file_err)
+		c.String(http.StatusInternalServerError, file_err.Error())
 		return
 	}
 
+	file_info, info_err := file.Stat() // get info about file
+	if info_err != nil {               // error getting info
+		log.Printf("received an err on r_get_asset file('%v').Stat() with err %v", filePath, info_err)
+		c.String(http.StatusInternalServerError, info_err.Error())
+		return
+	}
+
+	fileETag := fmt.Sprintf("%x", file_info.ModTime().UnixNano())
+	if match := c.GetHeader("If-None-Match"); match == fileETag {
+		c.Status(http.StatusNotModified) // dont need to serve the asset, tell the browser to rely on its cache
+		return
+	}
+	c.Header("ETag", fileETag) // set the tag to prevent future load from re-requesting the same asset over again
+
+	// set the return type of data based on the filename suffix
 	switch {
 	case strings.HasSuffix(filename, ".csv"):
 		c.Header("Content-Type", "text/csv")
@@ -101,11 +95,20 @@ func r_get_asset(c *gin.Context) {
 	case strings.HasSuffix(filename, ".map"):
 		c.Header("Content-Type", "application/json")
 	default:
-		c.String(http.StatusInternalServerError, "unsupported image type")
+		c.String(http.StatusInternalServerError, "unsupported asset type")
 		return
 	}
 
-	http.ServeContent(c.Writer, c.Request, "", time.Now(), bytes.NewReader(fileData))
+	file_bytes, copy_err := io.ReadAll(file) // get all of the bytes inside the file
+	if copy_err != nil {
+		log.Printf("received an err on r_get_asset io.ReadAll(file('%v')) with err %v", filePath, copy_err)
+		c.String(http.StatusInternalServerError, copy_err.Error())
+		return
+	}
+
+	c.Header("Cache-Control", fmt.Sprintf("max-age=%v", *flag_i_cache_control_assets_seconds)) // dont have the browser re-request this file for seconds
+
+	http.ServeContent(c.Writer, c.Request, "", time.Now(), bytes.NewReader(file_bytes))
 }
 
 func r_get_database_page_image(c *gin.Context) {
@@ -185,6 +188,13 @@ func r_get_database_page_image(c *gin.Context) {
 		return
 	}
 
+	fileETag := fmt.Sprintf("%x", image_info.ModTime().UnixNano())
+	if match := c.GetHeader("If-None-Match"); match == fileETag {
+		c.Status(http.StatusNotModified)
+		return
+	}
+	c.Header("ETag", fileETag)
+
 	if image_info.Size() == 0 {
 		log.Printf("failed to pass the .Size() > 0 check on %v due", image_path)
 		c.String(http.StatusInternalServerError, "failed to load cover")
@@ -198,5 +208,6 @@ func r_get_database_page_image(c *gin.Context) {
 	}
 
 	c.Header("Content-Type", "image/jpg")
+	c.Header("Cache-Control", fmt.Sprintf("max-age=%v", *flag_i_cache_control_database_seconds)) // dont have the browser re-request this file for seconds
 	http.ServeContent(c.Writer, c.Request, image_name, time.Now(), bytes.NewReader(file_bytes))
 }

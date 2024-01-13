@@ -13,6 +13,8 @@ import (
 	`strings`
 	`sync`
 	`time`
+
+	go_smartchan `github.com/andreimerlescu/go-smartchan`
 )
 
 func database_load() error {
@@ -38,7 +40,13 @@ func database_load() error {
 
 	log.Printf("database_load => using directory = %v\n", directory)
 
-	err := filepath.WalkDir(filepath.Join(directory, "."), func(path string, d fs.DirEntry, err error) error {
+	walkPath := filepath.Join(directory, ".")
+	if !strings.HasPrefix(walkPath, string(os.PathSeparator)) {
+		walkPath = filepath.Join(".", walkPath)
+	}
+	log.Printf("walkPath => using directory = %v\n", walkPath)
+
+	err := filepath.WalkDir(walkPath, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -117,14 +125,16 @@ func resolve_symlink(path string) (string, error) {
 	return path, nil
 }
 
-func process_directories(ch <-chan interface{}) {
+func process_directories(sch *go_smartchan.SmartChan) {
 	for {
 		select {
-		case i_data, ok := <-ch:
+		case i_data, ok := <-sch.Chan():
 			if ok {
 				path, valid := i_data.(string)
 				if valid {
+					log.Printf("received path %v", path)
 					sem_db_directories.Acquire()
+					log.Printf("running with path %v", path)
 					wg_active_tasks.Add(1)
 					go analyze_document_directory(path)
 				} else {
@@ -138,14 +148,18 @@ func process_directories(ch <-chan interface{}) {
 }
 
 func analyze_document_directory(path string) {
-	defer sem_db_directories.Release()
-	defer wg_active_tasks.Done()
+	defer func() {
+		sem_db_directories.Release()
+		wg_active_tasks.Done()
+		log.Printf("finished analyzing path %v", path)
+	}()
+	log.Printf("analyzing path %v", path)
 
 	document_index := a_i_total_documents.Add(1)
 
 	log.Printf("working on analyze_document_directory(path = %v)", path)
 
-	path = strings.ReplaceAll(path, `mnt/volume_nyc3_01/stargate-tmp/mnt/volume_nyc3_01/stargate-tmp`, `mnt/volume_nyc3_01/stargate-tmp`)
+	path = strings.ReplaceAll(path, fmt.Sprintf("%v%v", *flag_s_database, *flag_s_database), *flag_s_database)
 
 	log.Printf("checking path = %v", path)
 
@@ -171,6 +185,10 @@ func analyze_document_directory(path string) {
 	var total_pages uint
 	if record.TotalPages > 0 {
 		total_pages = uint(record.TotalPages)
+	}
+
+	if record.Metadata == nil {
+		record.Metadata = make(map[string]string)
 	}
 
 	var record_number string
@@ -381,88 +399,7 @@ func analyze_page(record_identifier string, path string, i uint) {
 		log.Printf("[skipping] found a duplicate m_index_page_identifier[page_index] %d = %v", page_index, existing_entry)
 	}
 
-	words := strings.Fields(ocr)
-	for _, word := range words {
-		word = strings.ToLower(word)
-
-		mu_word_pages.RLock()
-		_, word_pages_defined := m_word_pages[word]
-		mu_word_pages.RUnlock()
-		if !word_pages_defined {
-			mu_word_pages.Lock()
-			m_word_pages[word] = make(map[string]struct{})
-			mu_word_pages.Unlock()
-		}
-
-		mu_word_pages.Lock()
-		m_word_pages[word][page_data.Identifier] = struct{}{}
-		mu_word_pages.Unlock()
-
-		word_score := NewGemScore(word)
-
-		// english
-		mu_page_gematria_english.RLock()
-		_, word_english_gematria_defined := m_page_gematria_english[word_score.English]
-		mu_page_gematria_english.RUnlock()
-		if !word_english_gematria_defined {
-			mu_page_gematria_english.Lock()
-			m_page_gematria_english[word_score.English] = make(map[string]map[string]struct{})
-			mu_page_gematria_english.Unlock()
-		}
-		mu_page_gematria_english.RLock()
-		_, page_exists_in_english_gematria := m_page_gematria_english[word_score.English][page_data.Identifier]
-		mu_page_gematria_english.RUnlock()
-		if !page_exists_in_english_gematria {
-			mu_page_gematria_english.Lock()
-			m_page_gematria_english[word_score.English][page_data.Identifier] = make(map[string]struct{})
-			mu_page_gematria_english.Unlock()
-		}
-		mu_page_gematria_english.Lock()
-		m_page_gematria_english[word_score.English][page_data.Identifier][word] = struct{}{}
-		mu_page_gematria_english.Unlock()
-
-		// jewish
-		mu_page_gematria_jewish.RLock()
-		_, word_jewish_gematria_defined := m_page_gematria_jewish[word_score.Jewish]
-		mu_page_gematria_jewish.RUnlock()
-		if !word_jewish_gematria_defined {
-			mu_page_gematria_jewish.Lock()
-			m_page_gematria_jewish[word_score.Jewish] = make(map[string]map[string]struct{})
-			mu_page_gematria_jewish.Unlock()
-		}
-		mu_page_gematria_jewish.RLock()
-		_, page_exists_in_jewish_gematria := m_page_gematria_jewish[word_score.Jewish][page_data.Identifier]
-		mu_page_gematria_jewish.RUnlock()
-		if !page_exists_in_jewish_gematria {
-			mu_page_gematria_jewish.Lock()
-			m_page_gematria_jewish[word_score.Jewish][page_data.Identifier] = make(map[string]struct{})
-			mu_page_gematria_jewish.Unlock()
-		}
-		mu_page_gematria_jewish.Lock()
-		m_page_gematria_jewish[word_score.Jewish][page_data.Identifier][word] = struct{}{}
-		mu_page_gematria_jewish.Unlock()
-
-		// simple
-		mu_page_gematria_simple.RLock()
-		_, word_simple_gematria_defined := m_page_gematria_simple[word_score.Simple]
-		mu_page_gematria_simple.RUnlock()
-		if !word_simple_gematria_defined {
-			mu_page_gematria_simple.Lock()
-			m_page_gematria_simple[word_score.Simple] = make(map[string]map[string]struct{})
-			mu_page_gematria_simple.Unlock()
-		}
-		mu_page_gematria_simple.RLock()
-		_, page_exists_in_simple_gematria := m_page_gematria_simple[word_score.Simple][page_data.Identifier]
-		mu_page_gematria_simple.RUnlock()
-		if !page_exists_in_simple_gematria {
-			mu_page_gematria_simple.Lock()
-			m_page_gematria_simple[word_score.Simple][page_data.Identifier] = make(map[string]struct{})
-			mu_page_gematria_simple.Unlock()
-		}
-		mu_page_gematria_simple.Lock()
-		m_page_gematria_simple[word_score.Simple][page_data.Identifier][word] = struct{}{}
-		mu_page_gematria_simple.Unlock()
-	}
+	ocr_to_textee_idx(page_data.Identifier, page_data.RecordIdentifier, uint(page_data.PageNumber), ocr)
 
 	mu_document_page_number_page.RLock()
 	_, pages_defined := m_document_page_number_page[record_identifier]
@@ -519,6 +456,7 @@ func dump_database_to_disk() {
 	go write_payload_to_file("m_page_gematria_english.json", &wg, &mu_page_gematria_english, &m_page_gematria_english)
 	go write_payload_to_file("m_page_gematria_jewish.json", &wg, &mu_page_gematria_jewish, &m_page_gematria_jewish)
 	go write_payload_to_file("m_page_gematria_simple.json", &wg, &mu_page_gematria_simple, &m_page_gematria_simple)
+	go write_payload_to_file("m_idx_textee_substring.json", &wg, &mu_idx_textee_substring, &m_idx_textee_substring)
 	//go write_payload_to_file("m_location_cities.json", &wg, &mu_location_cities, &m_location_cities)
 	//go write_payload_to_file("m_location_countries.json", &wg, &mu_location_countries, &m_location_countries)
 	//go write_payload_to_file("m_location_states.json", &wg, &mu_location_states, &m_location_states)
@@ -552,6 +490,7 @@ func restore_database_from_disk() {
 	go load_file_into_payload("m_page_gematria_english.json", &wg, &mu_page_gematria_english, &m_page_gematria_english)
 	go load_file_into_payload("m_page_gematria_jewish.json", &wg, &mu_page_gematria_jewish, &m_page_gematria_jewish)
 	go load_file_into_payload("m_page_gematria_simple.json", &wg, &mu_page_gematria_simple, &m_page_gematria_simple)
+	go load_file_into_payload("m_idx_textee_substring.json", &wg, &mu_idx_textee_substring, &m_idx_textee_substring)
 	//go load_file_into_payload("m_location_cities.json", &wg, &mu_location_cities, &m_location_cities)
 	//go load_file_into_payload("m_location_countries.json", &wg, &mu_location_countries, &m_location_countries)
 	//go load_file_into_payload("m_location_states.json", &wg, &mu_location_states, &m_location_states)
@@ -647,7 +586,8 @@ func can_restore_database_from_disk() bool {
 		f_b_path_exists(filepath.Join(*flag_s_persistent_database_file, "m_document_identifier_cover_page_identifier.json")) &&
 		f_b_path_exists(filepath.Join(*flag_s_persistent_database_file, "m_page_gematria_english.json")) &&
 		f_b_path_exists(filepath.Join(*flag_s_persistent_database_file, "m_page_gematria_jewish.json")) &&
-		f_b_path_exists(filepath.Join(*flag_s_persistent_database_file, "m_page_gematria_simple.json")) //&&
+		f_b_path_exists(filepath.Join(*flag_s_persistent_database_file, "m_page_gematria_simple.json")) &&
+		f_b_path_exists(filepath.Join(*flag_s_persistent_database_file, "m_idx_textee_substring.json")) //&&
 	//f_b_path_exists(filepath.Join(*flag_s_persistent_database_file, "m_location_cities.json")) &&
 	//f_b_path_exists(filepath.Join(*flag_s_persistent_database_file, "m_location_countries.json")) &&
 	//f_b_path_exists(filepath.Join(*flag_s_persistent_database_file, "m_location_states.json"))

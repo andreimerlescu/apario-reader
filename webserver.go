@@ -40,6 +40,9 @@ func NewWebServer(ctx context.Context) {
 			"max":                   f_i_max,
 			"min":                   f_i_min,
 			"human_bytes":           f_s_human_bytes,
+			"online_users":          f_i_online_users,
+			"m_online_entry":        f_m_online_entry,
+			"online_cache_delay":    f_i_online_cache_delay,
 			"titleize":              f_s_titleize,
 			"get_pg_id_from_doc_id_def_id_and_cur_pg_num": f_s_get_page_identifier_from_document_identifier_default_identifier_and_current_page_number,
 		}
@@ -82,6 +85,8 @@ func NewWebServer(ctx context.Context) {
 		// Web Server Configuration
 		r := gin.Default()
 
+		r.Use(middleware_database_loading())
+
 		// Middleware
 		if *flag_b_enable_tls_handshake_error_check {
 			r.Use(middleware_tls_handshake())
@@ -100,23 +105,26 @@ func NewWebServer(ctx context.Context) {
 			r.Use(middleware_cors())
 		}
 
+		go clean_online_counter_scheduler(ctx)
+		go load_online_counter_cache_scheduler(ctx)
+
 		// Special Routes
-		r.GET("/robots.txt", r_get_robots_txt)
+		r.GET("/robots.txt", middleware_online_counter(), r_get_robots_txt)
 		if *flag_b_enable_ads_txt {
-			r.GET("/ads.txt", r_get_ads_txt)
+			r.GET("/ads.txt", middleware_online_counter(), r_get_ads_txt)
 		}
 
 		if *flag_b_enable_security_txt {
-			r.GET("/security.txt", r_get_security_txt)
+			r.GET("/security.txt", middleware_online_counter(), r_get_security_txt)
 		}
 
 		if *flag_b_enable_ping {
-			r.Any("/ping", r_get_ping)
+			r.Any("/ping", middleware_online_counter(), r_get_ping)
 		}
 
 		// Content Security Policy
 		if *flag_b_enable_csp {
-			r.POST(*flag_s_csp_report_uri, func(c *gin.Context) {
+			r.POST(*flag_s_csp_report_uri, middleware_online_counter(), func(c *gin.Context) {
 				var report map[string]interface{}
 				if err := c.ShouldBindJSON(&report); err != nil {
 					c.String(http.StatusBadRequest, "Invalid report data")
@@ -139,35 +147,35 @@ func NewWebServer(ctx context.Context) {
 		r.GET("/covers/:document_identifier/:page_identifier/:size", middleware_rate_limiter(assetRateLimiter), r_get_database_page_image)
 
 		// Routes
-		r.GET("/", r_get_index)
-		r.GET("/search", r_get_search)
-		r.GET("/waiting-room", gin_get_waiting_room)
-		r.GET("/legal/community-standards", r_get_legal_community_standards)
-		r.GET("/legal/coppa", r_get_legal_coppa)
-		r.GET("/legal/gdpr", r_get_legal_gdpr)
-		r.GET("/legal/privacy", r_get_legal_privacy_policy)
-		r.GET("/legal/terms", r_get_legal_terms)
-		r.GET("/legal/license", r_get_legal_license)
-		r.GET("/contact", r_get_contact_us)
-		r.GET("/status", r_get_status)
-		r.GET("/documents", r_get_documents)
-		r.GET("/document/:identifier", r_get_view_document)
+		r.GET("/", middleware_online_counter(), r_get_index)
+		r.GET("/search", middleware_online_counter(), r_get_search)
+		r.GET("/waiting-room", middleware_online_counter(), gin_get_waiting_room)
+		r.GET("/legal/community-standards", middleware_online_counter(), r_get_legal_community_standards)
+		r.GET("/legal/coppa", middleware_online_counter(), r_get_legal_coppa)
+		r.GET("/legal/gdpr", middleware_online_counter(), r_get_legal_gdpr)
+		r.GET("/legal/privacy", middleware_online_counter(), r_get_legal_privacy_policy)
+		r.GET("/legal/terms", middleware_online_counter(), r_get_legal_terms)
+		r.GET("/legal/license", middleware_online_counter(), r_get_legal_license)
+		r.GET("/contact", middleware_online_counter(), r_get_contact_us)
+		r.GET("/status", middleware_online_counter(), r_get_status)
+		r.GET("/documents", middleware_online_counter(), r_get_documents)
+		r.GET("/document/:identifier", middleware_online_counter(), r_get_view_document)
 		if *flag_b_enable_downloads_rate_limiting {
-			r.GET("/download/document/:document_identifier/:filename", middleware_rate_limiter(downloadRateLimiter), r_get_download_document)
-			r.GET("/download/page/:page_identifier/:filename", middleware_rate_limiter(downloadRateLimiter), r_get_download_page)
+			r.GET("/download/document/:document_identifier/:filename", middleware_rate_limiter(downloadRateLimiter), middleware_online_counter(), r_get_download_document)
+			r.GET("/download/page/:page_identifier/:filename", middleware_rate_limiter(downloadRateLimiter), middleware_online_counter(), r_get_download_page)
 		} else {
-			r.GET("/download/document/:document_identifier/:filename", r_get_download_document)
-			r.GET("/download/page/:page_identifier/:filename", r_get_download_page)
+			r.GET("/download/document/:document_identifier/:filename", middleware_online_counter(), r_get_download_document)
+			r.GET("/download/page/:page_identifier/:filename", middleware_online_counter(), r_get_download_page)
 		}
 
-		r.GET("/gematria/:type/:number", r_get_gematria)
-		r.GET("/page/:identifier", r_get_page)
-		r.GET("/words", r_get_words)
-		r.GET("/word/:word", r_get_word)
-		r.GET("/stumbleinto", r_get_stumble_into)
-		r.GET("/StumbleInto", r_get_stumble_into)
-		r.GET("/dark", r_get_dark)
-		r.GET("/light", r_get_light)
+		r.GET("/gematria/:type/:number", middleware_online_counter(), r_get_gematria)
+		r.GET("/page/:identifier", middleware_online_counter(), r_get_page)
+		r.GET("/words", middleware_online_counter(), r_get_words)
+		r.GET("/word/:word", middleware_online_counter(), r_get_word)
+		r.GET("/stumbleinto", middleware_online_counter(), r_get_stumble_into)
+		r.GET("/StumbleInto", middleware_online_counter(), r_get_stumble_into)
+		r.GET("/dark", middleware_online_counter(), r_get_dark)
+		r.GET("/light", middleware_online_counter(), r_get_light)
 
 		r.NoRoute(handler_no_route_linter())
 

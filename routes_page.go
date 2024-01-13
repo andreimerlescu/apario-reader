@@ -81,6 +81,10 @@ func r_get_page(c *gin.Context) {
 		template_vars["meta_"+key] = value
 	}
 
+	if metadata == nil {
+		metadata = make(map[string]string)
+	}
+
 	metadata["Page"] = fmt.Sprintf("Page %d of %d", page_number, total_pages)
 	metadata["Source URL"] = source_url
 	template_vars["i_page"] = int(page_number)

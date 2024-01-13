@@ -24,4 +24,9 @@
         <a href="/light" title="Enable Light Mode" class='{{ if eq .is_dark_mode "0" }}fw-bolder{{else}}fw-light{{end}}'>Light</a>
         Mode
     </p>
+    <p>
+        <small>
+            {{ online_users }} online within last {{ online_cache_delay }} minute{{ if gt online_cache_delay 2 }}s{{ end }}.
+        </small>
+    </p>
 </div>

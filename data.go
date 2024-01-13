@@ -166,11 +166,14 @@ var (
 	re_date6 = regexp.MustCompile(`(\d{4})`)
 
 	// Security
-	mu_ip_watch_list    = &sync.RWMutex{}
-	m_ip_watch_list     = map[string]*atomic.Int64{}
-	mu_ip_ban_list      = &sync.RWMutex{}
-	m_ip_ban_list       []net.IP
-	sem_banned_ip_patch = sema.New(1)
+	mu_ip_watch_list                   = &sync.RWMutex{}
+	m_ip_watch_list                    = map[string]*atomic.Int64{}
+	mu_ip_ban_list                     = &sync.RWMutex{}
+	m_ip_ban_list             []net.IP = []net.IP{}
+	m_online_list                      = map[string]online_entry{} // map[ip]online_entry{}
+	mu_online_list                     = sync.RWMutex{}
+	a_i_cached_online_counter          = atomic.Int64{}
+	sem_banned_ip_patch                = sema.New(1)
 
 	// Synchronization
 	wg_active_tasks   = cwg.CountableWaitGroup{}
@@ -191,6 +194,7 @@ var (
 	a_i_total_documents   = atomic.Int64{}
 	a_i_total_pages       = atomic.Int64{}
 	a_i_waiting_room      = atomic.Int64{}
+	a_b_database_loaded   = atomic.Bool{}
 
 	// Regular Expressions
 	reg_identifier = regexp.MustCompile("[^a-zA-Z0-9]+")
@@ -222,6 +226,37 @@ var (
 	gin_func_vars    map[string]gin.H
 	mu_gin_func_vars = sync.RWMutex{}
 )
+
+type online_entry struct {
+	UserAgent     string
+	IP            net.IP
+	FirstAction   time.Time
+	LastAction    time.Time
+	Hits          *atomic.Int64
+	LastPath      string
+	Authenticated bool
+	Administrator bool
+	Username      string
+	Reputation    float64
+}
+
+// substring => qty in page id
+type text_cache_entry_identifier struct {
+	Identifier string
+	Quantity   int
+}
+
+type textee_cache_entry struct {
+	PageIdentifiers []text_cache_entry_identifier
+}
+
+func (tce *textee_cache_entry) Sort() {
+
+}
+
+type text_cache struct {
+	Substrings map[string]textee_cache_entry // "the" -> .PageIdentifiers map
+}
 
 type ts_ip_save_entry struct {
 	IP      net.IP
@@ -453,6 +488,21 @@ func f_s_titleize(input string) string {
 	input = strings.ReplaceAll(input, `_`, ` `)
 	caser := cases.Title(language.English)
 	return caser.String(input)
+}
+
+func f_i_online_users() int64 {
+	return a_i_cached_online_counter.Load()
+}
+
+func f_m_online_entry() map[string]online_entry {
+	mu_online_list.RLock()
+	entries := m_online_list
+	mu_online_list.Unlock()
+	return entries
+}
+
+func f_i_online_cache_delay() int {
+	return *flag_i_online_refresh_delay_minutes
 }
 
 func f_s_human_bytes(bytes int64, decimals int) string {
