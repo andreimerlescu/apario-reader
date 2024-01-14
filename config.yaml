@@ -1,10 +1,10 @@
 ---
 database: "/Users/araven/Documents/code/projects/go-badbitchreads/stargate-tmp"
-buffer: 3301
-limit: 3301
-directories-limiter: 369
-pages-limiter: 3301
-directory-buffer: 3301
+buffer: 1776
+limit: 1776
+directories-limiter: 1776
+pages-limiter: 1776
+directory-buffer: 1776
 site-title: DEV - I Do Read
 enable-cors: false
 enable-csp: false

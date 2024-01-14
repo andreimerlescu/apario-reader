@@ -14,9 +14,9 @@ import (
 	`strings`
 	`time`
 
+	go_editorjs `github.com/andreimerlescu/go-editorjs`
+	go_gematria `github.com/andreimerlescu/go-gematria`
 	`github.com/gin-gonic/gin`
-
-	`badbitchreads/editorjs`
 )
 
 func r_get_page(c *gin.Context) {
@@ -152,7 +152,7 @@ func r_get_page(c *gin.Context) {
 	}
 
 	ocr := string(ocr_bytes)
-	gematria := NewGemScore(ocr)
+	gematria, _ := go_gematria.NewGematria(ocr)
 	template_vars["full_text"] = ocr
 
 	from := c.DefaultQuery("from", "")
@@ -170,7 +170,7 @@ func r_get_page(c *gin.Context) {
 
 	template_vars["gematria"] = gematria
 	template_vars["full_text"] = template.HTML(ocr)
-	rawJson, json_err := editorjs.FromString(ocr)
+	rawJson, json_err := go_editorjs.FromString(ocr)
 	if json_err != nil {
 		log.Printf("json.Marshal failed on ocr text for page %v with err %v", page_identifier, json_err)
 		template_vars["full_text_json_data"] = nil
@@ -195,7 +195,11 @@ func r_get_page(c *gin.Context) {
 }
 
 func r_get_download_page(c *gin.Context) {
+	requestedAt := time.Now().UTC()
 	sem_pdf_downloads.Acquire()
+	if since := time.Since(requestedAt).Seconds(); since > 1.7 {
+		log.Printf("took %.0f seconds to acquire sem_pdf_downloads queue position", since)
+	}
 	defer sem_pdf_downloads.Release()
 	// TODO implement PDF downloads of a filename
 

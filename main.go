@@ -7,10 +7,8 @@ import (
 	`log`
 	`log/slog`
 	`os`
-	`os/exec`
 	`os/signal`
 	`path/filepath`
-	`runtime`
 	`syscall`
 	`time`
 )
@@ -59,7 +57,7 @@ func main() {
 		reader_buffer_bytes = *flag_i_buffer
 	}
 
-	logFile, logFileErr := os.OpenFile(*flag_g_log_file, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0666)
+	logFile, logFileErr := os.OpenFile(*flag_s_log_file, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0666)
 	if logFileErr != nil {
 		log.Fatal("Failed to open log file: ", logFileErr)
 	}
@@ -67,55 +65,9 @@ func main() {
 
 	watchdog := make(chan os.Signal, 1)
 	signal.Notify(watchdog, os.Kill, syscall.SIGTERM, os.Interrupt)
-	go func() {
-		<-watchdog
-		err := logFile.Close()
-		if err != nil {
-			log.Printf("failed to close the logFile due to error: %v", err)
-		}
-		cancel()
+	go watch_for_signal(watchdog, logFile, cancel)
 
-		wg_active_tasks.PreventAdd()
-
-		if !sem_analyze_pages.IsEmpty() {
-			log.Printf("sem_analyze_pages has %d items left inside it", sem_analyze_pages.Len())
-		}
-
-		if !sem_db_directories.IsEmpty() {
-			log.Printf("sem_db_directories has %d items left inside it", sem_db_directories.Len())
-		}
-
-		ch_db_directories.Close()
-		ch_cert_reloader_cancel.Close()
-		ch_webserver_done.Close()
-
-		fmt.Printf("Completed running in %d", time.Since(startedAt))
-
-		var cmd *exec.Cmd
-		switch runtime.GOOS {
-		case "windows":
-			cmd = exec.Command("tasklist", "/FI", "IMAGENAME eq apario-contribution.exe")
-		default:
-			cmd = exec.Command("pgrep", "apario-contribution")
-		}
-
-		output, err := cmd.Output()
-		if err != nil {
-			fmt.Println("Error:", err)
-			return
-		}
-
-		pids := parsePIDs(string(output))
-
-		for _, pid := range pids {
-			terminatePID(pid)
-		}
-
-		os.Exit(0)
-	}()
-
-	//bundled_load_all_words()
-	slog.Info("Break here")
+	bundled_load_all_words()
 
 	if f_b_db_flush_file_set() {
 		f_clear_db_restore_file()
@@ -126,9 +78,9 @@ func main() {
 		restore_database_from_disk()
 	}
 
-	log.Printf("loading cache db into memory")
+	germinatedAt := time.Now().UTC()
+
 	go process_directories(ch_db_directories)
-	defer ch_db_directories.Close()
 
 	go bundled_load_cryptonyms()
 
@@ -150,10 +102,26 @@ func main() {
 		slog.Error("failed to load the database with error %v", err)
 		return
 	}
-	log.Printf("waiting for wg_active_tasks to be done!")
+
 	wg_active_tasks.Wait()
+	log.Printf("completed loading the database in %.0f seconds", time.Since(germinatedAt).Seconds())
 	a_b_database_loaded.Store(true)
+
+	// memory stuff now
+	commencedAt := time.Now().UTC()
+	m_collections = nil
+	m_gematria_jewish = nil
+	m_gematria_english = nil
+	m_gematria_simple = nil
+	m_words = nil
+	m_words_english_gematria_english = nil
+	m_words_english_gematria_jewish = nil
+	m_words_english_gematria_simple = nil
+	ch_db_directories.Close()
+	log.Printf("flushed unnecessary maps out of memory. took %d ms", time.Since(commencedAt).Milliseconds())
+
 	log.Printf("wg_active_tasks has completed!")
+
 	if *flag_b_persist_runtime_database {
 		dump_database_to_disk()
 	}

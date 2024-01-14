@@ -20,7 +20,11 @@ func f_patch_server_with_banned_ip(ip net.IP) {
 			log.Println("Recovered from panic:", r)
 		}
 	}()
+	requestedAt := time.Now().UTC()
 	sem_banned_ip_patch.Acquire()
+	if since := time.Since(requestedAt).Seconds(); since > 1.7 {
+		log.Printf("took %.0f seconds to acquire sem_banned_ip_patch queue position", since)
+	}
 	defer sem_banned_ip_patch.Release()
 	// TODO: add the option to use firewall-cmd, ufw or iptables to block the IP address from the server with a comment
 	log.Printf("need to patch the server with banning the ip %v", ip)

@@ -2,6 +2,7 @@ package main
 
 import (
 	`log`
+	`log/slog`
 	`strings`
 	`sync`
 
@@ -24,16 +25,14 @@ func ocr_to_textee_idx(pageIdentifier string, documentIdentifier string, pageNum
 		if len(substring) == 0 || counter == nil {
 			continue
 		}
-		mu_idx_textee_substring.RLock()
-		substring_entry, entry_exists := m_idx_textee_substring[substring]
-		mu_idx_textee_substring.RUnlock()
-		if !entry_exists {
-			gem, gem_err := go_gematria.NewGematria(substring)
-			if gem_err != nil {
-				log.Printf("received gematria error %v for substring %v", gem_err, substring)
-			}
+		gem, gem_err := go_gematria.NewGematria(substring)
+		if gem_err != nil {
+			log.Printf("received gematria error %v for substring %v", gem_err, substring)
+		}
 
-			mu_idx_textee_substring.Lock()
+		mu_idx_textee_substring.Lock()
+		substring_entry, entry_exists := m_idx_textee_substring[substring]
+		if !entry_exists {
 			m_idx_textee_substring[substring] = ts_idx_textee_substring{
 				Gematria:            gem,
 				PageIdentifiers:     map[string]int32{pageIdentifier: counter.Load()},
@@ -42,8 +41,6 @@ func ocr_to_textee_idx(pageIdentifier string, documentIdentifier string, pageNum
 			mu_idx_textee_substring.Unlock()
 			continue
 		}
-
-		mu_idx_textee_substring.Lock()
 
 		// delete
 		delete(m_idx_textee_substring, substring)
@@ -75,81 +72,110 @@ func ocr_to_textee_idx(pageIdentifier string, documentIdentifier string, pageNum
 func save_textee_gematria(word string, pageIdentifier string) {
 	word = strings.ToLower(word)
 
-	mu_word_pages.RLock()
-	_, word_pages_defined := m_word_pages[word]
-	mu_word_pages.RUnlock()
-	if !word_pages_defined {
-		mu_word_pages.Lock()
-		m_word_pages[word] = make(map[string]struct{})
-		mu_word_pages.Unlock()
+	word_score, gem_err := go_gematria.NewGematria(word)
+	if gem_err != nil {
+		return // gem_err
 	}
 
 	mu_word_pages.Lock()
+	_, word_pages_defined := m_word_pages[word]
+	if !word_pages_defined {
+		m_word_pages[word] = make(map[string]struct{})
+	}
 	m_word_pages[word][pageIdentifier] = struct{}{}
 	mu_word_pages.Unlock()
 
-	word_score := NewGemScore(word)
+	index_textee_word_gematria_against_page_identifier(word, word_score, pageIdentifier)
+}
 
+func save_dictionary_textee_index(word string, pageIdentifier string) {
+	word = strings.ToLower(word)
+
+	wg := sync.WaitGroup{}
+	for _, language := range s_dictionary_languages {
+		wg.Add(1)
+		go func(wg *sync.WaitGroup, language string, word string, pageIdentifier string) {
+			defer wg.Done()
+			err := only_permit_dictionary_substring_indexing(language, word, pageIdentifier)
+			if err != nil {
+				slog.Error("received an error loading %v: %v", language, err)
+			}
+		}(&wg, language, word, pageIdentifier)
+	}
+	wg.Wait()
+}
+
+func only_permit_dictionary_substring_indexing(language string, word string, pageIdentifier string) error {
+	word_score, gem_err := go_gematria.NewGematria(word)
+	if gem_err != nil {
+		return gem_err
+	}
+	mu_words.RLock()
+	_, language_found := m_words[language]
+	if !language_found {
+		mu_words.RUnlock()
+		return nil // no result, just return and do nothing
+	}
+
+	_, word_defined := m_words[language][word]
+	if !word_defined {
+		mu_words.RUnlock()
+		return nil // no result, just return and do nothing
+	}
+	mu_words.RUnlock()
+
+	// the word/substring is a dictionary word, so lets index it
+
+	mu_word_pages.Lock()
+	_, word_pages_defined := m_word_pages[word]
+	if !word_pages_defined {
+		m_word_pages[word] = make(map[string]struct{})
+	}
+	m_word_pages[word][pageIdentifier] = struct{}{}
+	mu_word_pages.Unlock()
+
+	index_textee_word_gematria_against_page_identifier(word, word_score, pageIdentifier)
+
+	return nil
+}
+
+func index_textee_word_gematria_against_page_identifier(word string, word_score go_gematria.Gematria, pageIdentifier string) {
 	// english
-	mu_page_gematria_english.RLock()
-	_, word_english_gematria_defined := m_page_gematria_english[word_score.English]
-	mu_page_gematria_english.RUnlock()
-	if !word_english_gematria_defined {
-		mu_page_gematria_english.Lock()
-		m_page_gematria_english[word_score.English] = make(map[string]map[string]struct{})
-		mu_page_gematria_english.Unlock()
-	}
-	mu_page_gematria_english.RLock()
-	_, page_exists_in_english_gematria := m_page_gematria_english[word_score.English][pageIdentifier]
-	mu_page_gematria_english.RUnlock()
-	if !page_exists_in_english_gematria {
-		mu_page_gematria_english.Lock()
-		m_page_gematria_english[word_score.English][pageIdentifier] = make(map[string]struct{})
-		mu_page_gematria_english.Unlock()
-	}
 	mu_page_gematria_english.Lock()
+	_, word_english_gematria_defined := m_page_gematria_english[word_score.English]
+	if !word_english_gematria_defined {
+		m_page_gematria_english[word_score.English] = make(map[string]map[string]struct{})
+	}
+	_, page_exists_in_english_gematria := m_page_gematria_english[word_score.English][pageIdentifier]
+	if !page_exists_in_english_gematria {
+		m_page_gematria_english[word_score.English][pageIdentifier] = make(map[string]struct{})
+	}
 	m_page_gematria_english[word_score.English][pageIdentifier][word] = struct{}{}
 	mu_page_gematria_english.Unlock()
 
 	// jewish
-	mu_page_gematria_jewish.RLock()
-	_, word_jewish_gematria_defined := m_page_gematria_jewish[word_score.Jewish]
-	mu_page_gematria_jewish.RUnlock()
-	if !word_jewish_gematria_defined {
-		mu_page_gematria_jewish.Lock()
-		m_page_gematria_jewish[word_score.Jewish] = make(map[string]map[string]struct{})
-		mu_page_gematria_jewish.Unlock()
-	}
-	mu_page_gematria_jewish.RLock()
-	_, page_exists_in_jewish_gematria := m_page_gematria_jewish[word_score.Jewish][pageIdentifier]
-	mu_page_gematria_jewish.RUnlock()
-	if !page_exists_in_jewish_gematria {
-		mu_page_gematria_jewish.Lock()
-		m_page_gematria_jewish[word_score.Jewish][pageIdentifier] = make(map[string]struct{})
-		mu_page_gematria_jewish.Unlock()
-	}
 	mu_page_gematria_jewish.Lock()
+	_, word_jewish_gematria_defined := m_page_gematria_jewish[word_score.Jewish]
+	if !word_jewish_gematria_defined {
+		m_page_gematria_jewish[word_score.Jewish] = make(map[string]map[string]struct{})
+	}
+	_, page_exists_in_jewish_gematria := m_page_gematria_jewish[word_score.Jewish][pageIdentifier]
+	if !page_exists_in_jewish_gematria {
+		m_page_gematria_jewish[word_score.Jewish][pageIdentifier] = make(map[string]struct{})
+	}
 	m_page_gematria_jewish[word_score.Jewish][pageIdentifier][word] = struct{}{}
 	mu_page_gematria_jewish.Unlock()
 
 	// simple
-	mu_page_gematria_simple.RLock()
-	_, word_simple_gematria_defined := m_page_gematria_simple[word_score.Simple]
-	mu_page_gematria_simple.RUnlock()
-	if !word_simple_gematria_defined {
-		mu_page_gematria_simple.Lock()
-		m_page_gematria_simple[word_score.Simple] = make(map[string]map[string]struct{})
-		mu_page_gematria_simple.Unlock()
-	}
-	mu_page_gematria_simple.RLock()
-	_, page_exists_in_simple_gematria := m_page_gematria_simple[word_score.Simple][pageIdentifier]
-	mu_page_gematria_simple.RUnlock()
-	if !page_exists_in_simple_gematria {
-		mu_page_gematria_simple.Lock()
-		m_page_gematria_simple[word_score.Simple][pageIdentifier] = make(map[string]struct{})
-		mu_page_gematria_simple.Unlock()
-	}
 	mu_page_gematria_simple.Lock()
+	_, word_simple_gematria_defined := m_page_gematria_simple[word_score.Simple]
+	if !word_simple_gematria_defined {
+		m_page_gematria_simple[word_score.Simple] = make(map[string]map[string]struct{})
+	}
+	_, page_exists_in_simple_gematria := m_page_gematria_simple[word_score.Simple][pageIdentifier]
+	if !page_exists_in_simple_gematria {
+		m_page_gematria_simple[word_score.Simple][pageIdentifier] = make(map[string]struct{})
+	}
 	m_page_gematria_simple[word_score.Simple][pageIdentifier][word] = struct{}{}
 	mu_page_gematria_simple.Unlock()
 }

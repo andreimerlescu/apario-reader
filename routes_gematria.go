@@ -8,6 +8,7 @@ import (
 	`strconv`
 	`strings`
 
+	go_gematria `github.com/andreimerlescu/go-gematria`
 	`github.com/gin-gonic/gin`
 )
 
@@ -64,7 +65,7 @@ func r_get_gematria(c *gin.Context) {
 	type result struct {
 		Word       string
 		Pages      uint
-		GemScore   GemScore
+		GemScore   go_gematria.Gematria
 		URL        string
 		Identifier string
 	}
@@ -80,10 +81,14 @@ func r_get_gematria(c *gin.Context) {
 	case "english":
 		for page_identifier, matching_words := range map_words_pages {
 			for word, _ := range matching_words {
+				gem, gem_err := go_gematria.NewGematria(word)
+				if gem_err != nil {
+					continue
+				}
 				result := result{
 					Word:       word,
 					Identifier: page_identifier,
-					GemScore:   NewGemScore(word),
+					GemScore:   gem,
 					URL:        "/search?query=" + word,
 				}
 				mu_page_gematria_english.RLock()
@@ -98,10 +103,14 @@ func r_get_gematria(c *gin.Context) {
 	case "simple":
 		for page_identifier, matching_words := range map_words_pages {
 			for word, _ := range matching_words {
+				gem, gem_err := go_gematria.NewGematria(word)
+				if gem_err != nil {
+					continue
+				}
 				result := result{
 					Word:       word,
 					Identifier: page_identifier,
-					GemScore:   NewGemScore(word),
+					GemScore:   gem,
 					URL:        "/search?query=" + word,
 				}
 				mu_page_gematria_simple.RLock()
@@ -116,10 +125,14 @@ func r_get_gematria(c *gin.Context) {
 	case "jewish":
 		for page_identifier, matching_words := range map_words_pages {
 			for word, _ := range matching_words {
+				gem, gem_err := go_gematria.NewGematria(word)
+				if gem_err != nil {
+					continue
+				}
 				result := result{
 					Word:       word,
 					Identifier: page_identifier,
-					GemScore:   NewGemScore(word),
+					GemScore:   gem,
 					URL:        "/search?query=" + word,
 				}
 				mu_page_gematria_jewish.RLock()

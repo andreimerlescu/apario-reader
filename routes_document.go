@@ -172,7 +172,11 @@ func r_get_view_document(c *gin.Context) {
 }
 
 func r_get_download_document(c *gin.Context) {
+	requestedAt := time.Now().UTC()
 	sem_pdf_downloads.Acquire()
+	if since := time.Since(requestedAt).Seconds(); since > 1.7 {
+		log.Printf("took %.0f seconds to acquire sem_pdf_downloads queue position", since)
+	}
 	defer sem_pdf_downloads.Release()
 	// TODO implement PDF downloads of a filename
 

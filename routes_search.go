@@ -13,6 +13,7 @@ import (
 	`sync/atomic`
 	`time`
 
+	go_gematria `github.com/andreimerlescu/go-gematria`
 	sema `github.com/andreimerlescu/go-sema`
 	go_smartchan `github.com/andreimerlescu/go-smartchan`
 	`github.com/gin-gonic/gin`
@@ -24,7 +25,11 @@ func r_get_search(c *gin.Context) {
 		c.Redirect(http.StatusTemporaryRedirect, "/waiting-room")
 		return
 	}
+	requestedAt := time.Now().UTC()
 	sem_concurrent_searches.Acquire()
+	if since := time.Since(requestedAt).Seconds(); since > 1.7 {
+		log.Printf("took %.0f seconds to acquire sem_concurrent_searches queue position", since)
+	}
 	defer sem_concurrent_searches.Release()
 	a_i_waiting_room.Add(-1)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(*flag_i_search_timeout_seconds))
@@ -58,7 +63,11 @@ func r_get_search(c *gin.Context) {
 	// ands
 	for _, word := range query_analysis.Ands {
 		wg.Add(1)
+		requestedAt := time.Now().UTC()
 		sem_query_limiter.Acquire()
+		if since := time.Since(requestedAt).Seconds(); since > 1.7 {
+			log.Printf("took %.0f seconds to acquire sem_query_limiter queue position", since)
+		}
 		go func(ctx context.Context, word string, sch *go_smartchan.SmartChan, sem sema.Semaphore) {
 			defer wg.Done()
 			defer sem.Release()
@@ -73,7 +82,11 @@ func r_get_search(c *gin.Context) {
 	// nots
 	for _, word := range query_analysis.Nots {
 		wg.Add(1)
+		requestedAt := time.Now().UTC()
 		sem_query_limiter.Acquire()
+		if since := time.Since(requestedAt).Seconds(); since > 1.7 {
+			log.Printf("took %.0f seconds to acquire sem_query_limiter queue position", since)
+		}
 		go func(ctx context.Context, word string, sch *go_smartchan.SmartChan, sem sema.Semaphore) {
 			defer wg.Done()
 			defer sem.Release()
@@ -227,7 +240,7 @@ func deliver_search_results(c *gin.Context, query string, analysis SearchAnalysi
 	result.Results = result_page_identifiers
 	result.Total = len(matching_page_identifiers)
 
-	query_gem_score := NewGemScore(result.Query)
+	query_gem_score, _ := go_gematria.NewGematria(result.Query)
 
 	template_vars["total_matching_page_identifiers"] = len(matching_page_identifiers)
 	template_vars["s_total_matching_page_identifiers"] = human_int(int64(len(matching_page_identifiers)))

@@ -58,6 +58,21 @@ func middleware_online_counter() gin.HandlerFunc {
 	return middleware_activate_online_counter
 }
 
+func middleware_force_https() gin.HandlerFunc {
+	return middleware_redirect_to_https
+}
+
+func middleware_redirect_to_https(c *gin.Context) {
+	if *flag_b_redirect_http_to_https {
+		url := c.Request.URL
+		url.Scheme = "https"
+		url.Host = c.Request.Host
+		c.Redirect(http.StatusMovedPermanently, url.String())
+		return
+	}
+	c.Next()
+}
+
 func middleware_activate_online_counter(c *gin.Context) {
 	ip := f_s_filtered_ip(c)
 	mu_online_list.RLock()

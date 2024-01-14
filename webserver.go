@@ -5,8 +5,10 @@ import (
 	"crypto/tls"
 	`errors`
 	"html/template"
+	`io`
 	"log"
 	"net/http"
+	`os`
 	"strconv"
 	"time"
 
@@ -82,8 +84,25 @@ func NewWebServer(ctx context.Context) {
 			})
 		}
 
+		// gin logs
+		f, f_err := os.OpenFile(*flag_s_gin_log_file, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0666)
+		if f_err == nil { // no error received
+			if *flag_b_gin_log_to_stdout { // logging to STDOUT + log file
+				gin.DefaultWriter = io.MultiWriter(f, os.Stdout)
+			} else {
+				gin.DisableConsoleColor() // disable colors for logging to log file only
+				gin.DefaultWriter = io.MultiWriter(f)
+			}
+		} // if there was an err with opening the gin log file, default to gin's default behavior
+
 		// Web Server Configuration
 		r := gin.Default()
+
+		if *flag_s_environment == *flag_s_production_environment_label && len(*flag_s_production_environment_label) > 0 {
+			gin.SetMode(gin.ReleaseMode)
+		} else {
+			gin.SetMode(gin.DebugMode)
+		}
 
 		r.Use(middleware_database_loading())
 
@@ -95,18 +114,6 @@ func NewWebServer(ctx context.Context) {
 			r.Use(middleware_enforce_ip_ban_list())
 			go f_schedule_ip_ban_list_cleanup(ctx)
 		}
-		if *flag_b_enable_rate_limiting {
-			r.Use(middleware_rate_limiter(routeRateLimiter))
-		}
-		if *flag_b_enable_csp {
-			r.Use(middleware_csp())
-		}
-		if *flag_b_enable_cors {
-			r.Use(middleware_cors())
-		}
-
-		go clean_online_counter_scheduler(ctx)
-		go load_online_counter_cache_scheduler(ctx)
 
 		// Special Routes
 		r.GET("/robots.txt", middleware_online_counter(), r_get_robots_txt)
@@ -140,11 +147,34 @@ func NewWebServer(ctx context.Context) {
 		// Serve all static assets using this entry point
 		if *flag_b_enable_asset_rate_limiting {
 			r.GET("/assets/:directory/:filename", middleware_rate_limiter(assetRateLimiter), r_get_asset)
+			r.GET("/covers/:document_identifier/:page_identifier/:size", middleware_rate_limiter(assetRateLimiter), r_get_database_page_image)
+			r.GET("/pending-viewport-placeholder.svg", middleware_rate_limiter(assetRateLimiter), r_get_pending_viewport_placeholder_svg)
 		} else {
 			r.GET("/assets/:directory/:filename", r_get_asset)
+			r.GET("/covers/:document_identifier/:page_identifier/:size", r_get_database_page_image)
+			r.GET("/pending-viewport-placeholder.svg", r_get_pending_viewport_placeholder_svg)
 		}
 
-		r.GET("/covers/:document_identifier/:page_identifier/:size", middleware_rate_limiter(assetRateLimiter), r_get_database_page_image)
+		if *flag_b_enable_downloads_rate_limiting {
+			r.GET("/download/document/:document_identifier/:filename", middleware_rate_limiter(downloadRateLimiter), middleware_online_counter(), r_get_download_document)
+			r.GET("/download/page/:page_identifier/:filename", middleware_rate_limiter(downloadRateLimiter), middleware_online_counter(), r_get_download_page)
+		} else {
+			r.GET("/download/document/:document_identifier/:filename", middleware_online_counter(), r_get_download_document)
+			r.GET("/download/page/:page_identifier/:filename", middleware_online_counter(), r_get_download_page)
+		}
+
+		if *flag_b_enable_rate_limiting {
+			r.Use(middleware_rate_limiter(routeRateLimiter))
+		}
+		if *flag_b_enable_csp {
+			r.Use(middleware_csp())
+		}
+		if *flag_b_enable_cors {
+			r.Use(middleware_cors())
+		}
+
+		go clean_online_counter_scheduler(ctx)
+		go load_online_counter_cache_scheduler(ctx)
 
 		// Routes
 		r.GET("/", middleware_online_counter(), r_get_index)
@@ -160,14 +190,6 @@ func NewWebServer(ctx context.Context) {
 		r.GET("/status", middleware_online_counter(), r_get_status)
 		r.GET("/documents", middleware_online_counter(), r_get_documents)
 		r.GET("/document/:identifier", middleware_online_counter(), r_get_view_document)
-		if *flag_b_enable_downloads_rate_limiting {
-			r.GET("/download/document/:document_identifier/:filename", middleware_rate_limiter(downloadRateLimiter), middleware_online_counter(), r_get_download_document)
-			r.GET("/download/page/:page_identifier/:filename", middleware_rate_limiter(downloadRateLimiter), middleware_online_counter(), r_get_download_page)
-		} else {
-			r.GET("/download/document/:document_identifier/:filename", middleware_online_counter(), r_get_download_document)
-			r.GET("/download/page/:page_identifier/:filename", middleware_online_counter(), r_get_download_page)
-		}
-
 		r.GET("/gematria/:type/:number", middleware_online_counter(), r_get_gematria)
 		r.GET("/page/:identifier", middleware_online_counter(), r_get_page)
 		r.GET("/words", middleware_online_counter(), r_get_words)
@@ -181,6 +203,10 @@ func NewWebServer(ctx context.Context) {
 
 		// Start HTTP Server
 		go func(r *gin.Engine) {
+			if *flag_b_redirect_http_to_https {
+				r.Use(middleware_force_https())
+			}
+
 			server := &http.Server{
 				Addr:    ":" + strconv.Itoa(*flag_i_webserver_default_port),
 				Handler: r,
