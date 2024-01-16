@@ -621,33 +621,41 @@ func load_file_into_payload(filename string, wg *sync.WaitGroup, mu *sync.RWMute
 	log.Printf("completed loading file %v into the payload\n", filename)
 }
 
-func write_payload_to_file(filename string, wg *sync.WaitGroup, mu *sync.RWMutex, payload any) {
-	wg.Add(1)
-	defer wg.Done()
-	file, err := os.Create(filepath.Join(*flag_s_persistent_database_file, filename))
+func write_any_to_file(database string, filename string, payload any) error {
+	file, err := os.Create(filepath.Join(database, filename))
 	if err != nil {
 		fmt.Println("Error opening file:", err)
-		return
+		return err
 	}
 	defer file.Close()
 
 	bufferedWriter := bufio.NewWriter(file)
-	mu.RLock()
 	marshal, err := json.Marshal(payload)
-	mu.RUnlock()
 	if err != nil {
 		fmt.Println("Error writing to file:", err)
-		return
+		return err
 	}
 
 	_, err = bufferedWriter.Write(marshal)
 	if err != nil {
 		fmt.Println("Error writing to file:", err)
-		return
+		return err
 	}
 
 	if err := bufferedWriter.Flush(); err != nil {
 		fmt.Println("Error flushing writer:", err)
+		return err
+	}
+	return nil
+}
+
+func write_payload_to_file(filename string, wg *sync.WaitGroup, mu *sync.RWMutex, payload any) {
+	wg.Add(1)
+	defer wg.Done()
+	mu.Lock()
+	defer mu.Unlock()
+	err := write_any_to_file(filename, *flag_s_persistent_database_file, payload)
+	if err != nil {
 		return
 	}
 }

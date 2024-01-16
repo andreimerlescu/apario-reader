@@ -2,6 +2,7 @@
 
 Mousetrap.bind('s i enter', function(){ window.location = "/StumbleInto"}, 'keyup');
 Mousetrap.bind('q enter', function(){ window.location = "/StumbleInto"}, 'keyup');
+Mousetrap.bind('alt alt', function(){ window.location = "/StumbleInto"}, 'keyup');
 
 $(function () {
 

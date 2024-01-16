@@ -14,13 +14,17 @@ import (
 
 func watch_for_signal(watchdog chan os.Signal, logFile *os.File, cancel context.CancelFunc) {
 	<-watchdog
-	err := logFile.Close()
+	log.Printf("watchdog signal received")
+	wg_active_tasks.PreventAdd()
+	err := ch_webserver_done.Write(struct{}{})
+	if err != nil {
+		log.Printf("cant close ch_webserver_done")
+	}
+	err = logFile.Close()
 	if err != nil {
 		log.Printf("failed to close the logFile due to error: %v", err)
 	}
 	cancel()
-
-	wg_active_tasks.PreventAdd()
 
 	if !sem_analyze_pages.IsEmpty() {
 		log.Printf("sem_analyze_pages has %d items left inside it", sem_analyze_pages.Len())

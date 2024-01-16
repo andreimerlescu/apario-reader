@@ -1,10 +1,10 @@
 ---
-database: "/Users/araven/Documents/code/projects/go-badbitchreads/stargate-tmp"
-buffer: 1776
-limit: 1776
-directories-limiter: 1776
-pages-limiter: 1776
-directory-buffer: 1776
+database: "/Users/araven/Documents/code/projects/apario-reader/stargate-tmp"
+buffer: 3301
+limiter: 3301
+directories-limiter: 13000
+pages-limiter: 93000
+directory-buffer: 13000
 site-title: DEV - I Do Read
 enable-cors: false
 enable-csp: false

@@ -41,8 +41,6 @@ func r_get_page(c *gin.Context) {
 
 	directory = strings.ReplaceAll(directory, filepath.Join(*flag_s_database, *flag_s_database), *flag_s_database)
 
-	log.Printf("using directory %v", directory)
-
 	page_identifier := c.Param("identifier")
 	page_identifier = reg_identifier.ReplaceAllString(page_identifier, "") // sanitize input
 
@@ -216,7 +214,6 @@ func r_get_download_page(c *gin.Context) {
 	}
 	directory = resolvedPath
 	directory = strings.ReplaceAll(directory, filepath.Join(*flag_s_database, *flag_s_database), *flag_s_database)
-	log.Printf("using directory %v", directory)
 
 	page_identifier := c.Param("page_identifier")
 	page_identifier = reg_identifier.ReplaceAllString(page_identifier, "") // sanitize input

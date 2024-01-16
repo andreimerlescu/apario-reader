@@ -39,6 +39,10 @@ func middleware_database_loading() gin.HandlerFunc {
 	return middleware_wait_for_database
 }
 
+func middleware_enforce_authenticity_token() gin.HandlerFunc {
+	return f_enforce_authenticity_token
+}
+
 func middleware_wait_for_database(c *gin.Context) {
 	if !a_b_database_loaded.Load() {
 		c.AbortWithStatusJSON(http.StatusNotAcceptable, map[string]string{"error": "Please wait for the application to boot."})

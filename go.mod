@@ -1,4 +1,4 @@
-module badbitchreads
+module apario-reader
 
 go 1.21
 

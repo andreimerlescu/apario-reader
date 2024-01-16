@@ -1,12 +1,4 @@
 <a href="/?from=logo" title="{{ .title }}">
     <img class="d-block mx-auto mb-4" src='/assets/images/idoread_logo2024-{{ if eq .is_dark_mode "1" }}dark{{else}}light{{end}}.png' alt="{{ .title }}" data-dark-mode="{{ .is_dark_mode }}"/>
 </a>
-<div class="mb-4">
-    <a href="/" title="Search">Search</a>
-    &middot;
-    <a href="/documents" title="All Documents">Documents</a>
-    &middot;
-    <a href="/stumbleinto" title="StumbleInto®">StumbleInto</a>
-    &middot;
-    <a href="/status" title="Status">Status</a>
-</div>
+{{ render_partial "nav_bar" .is_dark_mode }}

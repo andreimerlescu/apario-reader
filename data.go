@@ -32,6 +32,7 @@ import (
 	sema `github.com/andreimerlescu/go-sema`
 	sch `github.com/andreimerlescu/go-smartchan`
 	`github.com/gin-gonic/gin`
+	`github.com/gorilla/sessions`
 )
 
 const (
@@ -42,6 +43,8 @@ const (
 
 var (
 	startedAt = time.Now().UTC()
+
+	session_store = sessions.NewFilesystemStore(*flag_s_sessions_directory, []byte(*flag_s_session_secret))
 
 	// Integers
 	channel_buffer_size    int = 1          // Buffered Channel's Size
@@ -179,6 +182,8 @@ var (
 
 	a_i_cached_online_counter = atomic.Int64{}
 	sem_banned_ip_patch       = sema.New(1)
+
+	sem_concurrent_crypt_actions = sema.New(*flag_s_session_concurrent_crypt_actions)
 
 	// Synchronization
 	wg_active_tasks   = cwg.CountableWaitGroup{}

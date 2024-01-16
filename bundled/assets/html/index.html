@@ -14,12 +14,26 @@
                 <p class="lead mb-4">Research {{ .total_documents }} documents containing over {{ .total_pages }} pages.</p>
                 <div class="d-grid gap-2 d-sm-flex justify-content-sm-center">
                     <form class="form" action="/search" method="get">
+                        <div class="input-group input-group-lg mb-3">
+                            <span class="input-grou-text">
+                                <i class="fa fa-search"></i>
+                                Search
+                            </span>
+                            <input type="text" class="form-control" placeholder="...you can use Advanced Search queries here!" name="query" id="query" aria-describedby="query-help"/>
+                            <button type="submit" class="btn btn-primary btn-lg px-4 gap-3">
+                                Go
+                                <span class="fa fa-chevron-right"></span>
+                            </button>
+                            <a href="/StumbleInto" title="StumbleInto" class="btn btn-success btn-lg px-4">
+                                <span class="fa fa-shuffle"></span>
+                                StumbleInto
+                                <span class="fa fa-chevron-right"></span>
+                            </a>
+                        </div>
                         <div class="mb-3">
-                            <input type="text" class="form-control" placeholder="Search Query" name="query" id="query" aria-describedby="query-help"/>
                             <div id="query-help" class="form-text"><u>Example query</u>: <em>(<b>orange</b> and <b>grape</b>) and <b>juice</b> not <b>fruit</b></em></div>
                         </div>
-                        <button type="submit" class="btn btn-primary btn-lg px-4 gap-3">Search</button>
-                        <a href="/stumbleinto" title="StumbleInto™" class="btn btn-outline-secondary btn-lg px-4">StumbleInto&trade;</a>
+
                     </form>
                 </div>
             </div>
