@@ -2,6 +2,8 @@ go.sum linguist-generated
 bundled/assets/css/bootstrap.* linguist-vendored
 bundled/assets/js/bootstrap.* linguist-vendored
 bundled/assets/css/fontawesome.* linguist-vendored
+bundled/assets/js/editorjs.* linguist-vendored
+bundled/assets/js/imagezoom* linguist-vendored
 bundled/words/words-*.txt linguist-vendored
 bundled/geography/locations.csv linguist-vendored
 bundled/intelligence/cryptonyms.json linguist-vendored
