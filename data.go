@@ -183,7 +183,8 @@ var (
 	a_i_cached_online_counter = atomic.Int64{}
 	sem_banned_ip_patch       = sema.New(1)
 
-	sem_concurrent_crypt_actions = sema.New(*flag_s_session_concurrent_crypt_actions)
+	sem_concurrent_crypt_actions                = sema.New(*flag_s_session_concurrent_crypt_actions)
+	sem_identifier_generator_concurrency_factor = sema.New(1)
 
 	// Synchronization
 	wg_active_tasks   = cwg.CountableWaitGroup{}

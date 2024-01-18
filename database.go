@@ -621,6 +621,34 @@ func load_file_into_payload(filename string, wg *sync.WaitGroup, mu *sync.RWMute
 	log.Printf("completed loading file %v into the payload\n", filename)
 }
 
+func write_to_file(filename string, payload any) error {
+	file, err := os.Create(filename)
+	if err != nil {
+		fmt.Println("Error opening file:", err)
+		return err
+	}
+	defer file.Close()
+
+	bufferedWriter := bufio.NewWriter(file)
+	marshal, err := json.Marshal(payload)
+	if err != nil {
+		fmt.Println("Error writing to file:", err)
+		return err
+	}
+
+	_, err = bufferedWriter.Write(marshal)
+	if err != nil {
+		fmt.Println("Error writing to file:", err)
+		return err
+	}
+
+	if err := bufferedWriter.Flush(); err != nil {
+		fmt.Println("Error flushing writer:", err)
+		return err
+	}
+	return nil
+}
+
 func write_any_to_file(database string, filename string, payload any) error {
 	file, err := os.Create(filepath.Join(database, filename))
 	if err != nil {

@@ -104,7 +104,7 @@ func NewWebServer(ctx context.Context) {
 			gin.SetMode(gin.DebugMode)
 		}
 
-		r.Use(middleware_database_loading())
+		r.Use(middleware_database_loaded())
 
 		// Middleware
 		if *flag_b_enable_tls_handshake_error_check {
@@ -167,10 +167,10 @@ func NewWebServer(ctx context.Context) {
 			r.Use(middleware_rate_limiter(routeRateLimiter))
 		}
 		if *flag_b_enable_csp {
-			r.Use(middleware_csp())
+			r.Use(middleware_content_security_policy())
 		}
 		if *flag_b_enable_cors {
-			r.Use(middleware_cors())
+			r.Use(middleware_cross_origin_request_scripts())
 		}
 
 		go clean_online_counter_scheduler(ctx)
@@ -216,6 +216,9 @@ func NewWebServer(ctx context.Context) {
 			r_account_group.GET("/logout", r_get_logout)
 			r_account_group.DELETE("/logout", middleware_enforce_authenticity_token(), r_get_logout)
 			r_account_group.DELETE("/session", middleware_enforce_authenticity_token(), r_get_logout)
+
+			// for the remainder of the routes, use this middleware
+			r_account_group.Use(middleware_ensure_authenticated())
 
 			// update profile
 			r_account_group.GET("/profile", r_get_manage_profile)
