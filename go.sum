@@ -1,5 +1,7 @@
 github.com/andreimerlescu/configurable v0.0.8 h1:Y7wHgGhYZxGSEQ2Zx07PmVB0b6rJI0YJoYRfxqoQbF0=
 github.com/andreimerlescu/configurable v0.0.8/go.mod h1:lIL86PTLGv2CSZq5Wo3MCc8v9jVSNG5+l6rnjkeXcSg=
+github.com/andreimerlescu/go-apario-identifier v0.0.1 h1:WtRHWbMvOKI+NwG0b+c4F6nx3POX4f+3csO9eX06aQg=
+github.com/andreimerlescu/go-apario-identifier v0.0.1/go.mod h1:9Rq9JctvHBA2DDv8+xUUKL+9YD/Xp97fND7kMAfJNgw=
 github.com/andreimerlescu/go-countable-waitgroup v0.0.3 h1:xQH6KqhyE+3Dxmm1uAW+jXnuwI3O8SgXhfpEd3qhMwk=
 github.com/andreimerlescu/go-countable-waitgroup v0.0.3/go.mod h1:bnjdLlK27r5U6IZSxRaPcyfgCMqZu/KO5LQNNdwF3aU=
 github.com/andreimerlescu/go-editorjs v0.0.1 h1:ki44LQbfSyWeWjgsPdpwlSRKQ9avZkJ5hl+Etry4HFw=

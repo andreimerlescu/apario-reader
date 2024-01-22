@@ -12,6 +12,8 @@ import (
 	`path/filepath`
 	`strings`
 	`time`
+
+	ai `github.com/andreimerlescu/go-apario-identifier`
 )
 
 // TSAccount is saved at <users.db>/<identifier-path>/account.json
@@ -25,6 +27,7 @@ type TSAccount struct {
 	RegistrationIP      net.IP    `json:"registration_ip"`
 	RegisteredAt        time.Time `json:"registered_at"`
 	LastLogin           time.Time `json:"last_login"`
+	LastLoginIP         net.IP    `json:"last_login_ip"`
 	LastFailedLogin     time.Time `json:"last_failed_login"`
 	LastFailedLoginIP   net.IP    `json:"last_failed_login_ip"`
 	Locked              bool      `json:"locked"`
@@ -45,7 +48,7 @@ func perform_username_sync() error {
 
 		cleaned_path := strings.ReplaceAll(path, *flag_s_users_database_directory, ``)
 		maybe_identifier := strings.ReplaceAll(cleaned_path, string(os.PathSeparator), ``)
-		identifier, maybe_err := ParseIdentifier(maybe_identifier)
+		identifier, maybe_err := ai.ParseIdentifier(maybe_identifier)
 		if maybe_err != nil {
 			return nil
 		}
@@ -116,8 +119,11 @@ func (a *TSAccount) Load() error {
 	if len(a.Identifier) == 0 {
 		return errors.New("identifier missing")
 	}
-
-	db_path := filepath.Join(*flag_s_users_database_directory, identifier_to_path(a.Identifier))
+	id, err := ai.ParseIdentifier(a.Identifier)
+	if err != nil {
+		return err
+	}
+	db_path := filepath.Join(*flag_s_users_database_directory, id.Path())
 	payload, payload_err := read_payload_from_database(filepath.Join(db_path, "account.json"))
 	if payload_err != nil {
 		return payload_err
@@ -167,7 +173,7 @@ func (a *TSAccount) Save() error {
 	defer a.database_document.Unlock()
 
 	if len(a.Identifier) == 0 {
-		identifier, identifier_err := NewIdentifier(*flag_s_users_database_directory, *flag_i_user_identifier_length, 0, 30)
+		identifier, identifier_err := ai.NewIdentifier(*flag_s_users_database_directory, *flag_i_user_identifier_length, 0, 30)
 		if identifier_err != nil {
 			return identifier_err
 		}
@@ -178,7 +184,11 @@ func (a *TSAccount) Save() error {
 
 	// account version control
 	// for document_version file will be = arg2=[<database>/<identifier-path>]/versions/arg1=[<version>].json
-	db_path := filepath.Join(*flag_s_users_database_directory, identifier_to_path(a.Identifier))
+	id, err2 := ai.ParseIdentifier(a.Identifier)
+	if err2 != nil {
+		return err2
+	}
+	db_path := filepath.Join(*flag_s_users_database_directory, id.Path())
 	version, version_err := version_exists_in_database_path(a.Version.String(), db_path)
 	if version_err != nil {
 		log.Printf("%v", version_err)
@@ -209,7 +219,7 @@ func (a *TSAccount) Save() error {
 			return av_err
 		}
 	}
-	return write_to_file(filepath.Join(*flag_s_users_database_directory, identifier_to_path(a.Identifier), "account.json"), a)
+	return write_to_file(filepath.Join(*flag_s_users_database_directory, id.Path(), "account.json"), a)
 }
 
 // AccountVersion is stored at <users.db>/<identifier-to-path>/versions/<version>.json
@@ -228,5 +238,9 @@ func (av *AccountVersion) Save() error {
 		return err
 	}
 	defer av.database_document.Unlock()
-	return write_to_file(filepath.Join(*flag_s_database, identifier_to_path(av.Identifier), "versions", fmt.Sprintf("%s.json", av.Version.String())), av)
+	id, err := ai.ParseIdentifier(av.Identifier)
+	if err != nil {
+		return err
+	}
+	return write_to_file(filepath.Join(*flag_s_database, id.Path(), "versions", fmt.Sprintf("%s.json", av.Version.String())), av)
 }

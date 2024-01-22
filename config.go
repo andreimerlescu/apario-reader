@@ -126,4 +126,5 @@ var (
 	flag_s_tag_database_path                       = config.NewString("tag-database-path", filepath.Join(".", "database", "tags.db"), "absolute path to the tags.db file for persistent storage")
 	flag_i_database_concurrent_write_semaphore     = config.NewInt("database-concurrent-write-semaphore", 17000, "concurrent disk write operations permitted to acquire a lock")
 	flag_i_user_identifier_length                  = config.NewInt("user_identifier_length", 6, "char length of the user identifier ; default is 6 which gives you 6^36 = 1.50094635e17 possibilities ; thats a lot!")
+	flag_s_textee_database_path                    = config.NewString("textee-database", filepath.Join(".", "database", "textee.db"), "absolute path to textee database directory")
 )

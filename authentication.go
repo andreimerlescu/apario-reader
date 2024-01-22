@@ -7,17 +7,6 @@ import (
 	`github.com/gin-gonic/gin`
 )
 
-func f_username_to_identifier(username string) ([64]byte, error) {
-	identifier := Sha256(username)
-	if len(identifier) != 64 {
-		return [64]byte{}, fmt.Errorf("identifier must be exactly 64 characters long")
-	}
-
-	var arr [64]byte
-	copy(arr[:], username)
-	return arr, nil
-}
-
 func f_gin_check_authenticated_in_session(c *gin.Context) error {
 	ip := f_s_client_ip(c.Request)
 	session := g_get_session(c)

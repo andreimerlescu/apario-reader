@@ -2,8 +2,9 @@ package main
 
 import (
 	`fmt`
+	`log`
+	`net`
 	`net/http`
-	`path/filepath`
 	`time`
 
 	`github.com/gin-gonic/gin`
@@ -17,17 +18,11 @@ func r_get_login(c *gin.Context) {
 func r_post_login(c *gin.Context) {
 	session := g_get_session(c)
 	username := c.PostForm("username")
-	identifier, identifier_err := f_username_to_identifier(username)
-	if identifier_err != nil {
-		f_session_flash(session, NewSessionAlert("error", "Cannot validate username.", time.Now().Add(36*time.Second), true))
-		c.Redirect(http.StatusTemporaryRedirect, "/login")
-		return
-	}
 
-	account, user_load_err := load_username_account(username)
-	if user_load_err != nil {
-		f_session_flash(session, NewSessionAlert("error", "No such username.", time.Now().Add(36*time.Second), true))
-		c.Redirect(http.StatusTemporaryRedirect, "/login")
+	account, username_err := GetAccount(username)
+	if username_err != nil {
+		f_session_flash(session, NewSessionAlert("error", "Cannot get username.", time.Now().Add(36*time.Second), true))
+		c.Redirect(http.StatusOK, "/login")
 		return
 	}
 
@@ -42,12 +37,16 @@ func r_post_login(c *gin.Context) {
 	session.Values["last_sign_in_ip"] = f_s_client_ip(c.Request)
 	session.Values["last_sign_in_at"] = time.Now().UTC()
 	session.Values["username"] = account.Username
-	checksum_path, path_err := checksum_to_path(string(identifier[:]))
-	if path_err != nil {
-		f_session_flash(session, NewSessionAlert("error", "Encountered a problem.", time.Now().Add(45*time.Second), true))
+	session.Values["account_identifier"] = account.Identifier
+	account.LastLogin = time.Now().UTC()
+	account.LastLoginIP = net.ParseIP(f_s_client_ip(c.Request))
+	err = account.Save()
+	if err != nil {
+		f_session_flash(session, NewSessionAlert("error", "Successful Login", time.Now().Add(36*time.Second), true))
 		c.Redirect(http.StatusTemporaryRedirect, "/login")
+		return
 	}
-	session.Values["account_db_path"] = filepath.Join(*flag_s_users_database_directory, checksum_path, account_database_filename)
+
 	f_session_flash(session, NewSessionAlert("success", fmt.Sprintf("Welcome back %v", account.Username), time.Now().Add(63*time.Second), true))
 	referer := c.GetHeader("Referer")
 	if len(referer) > 0 {
@@ -66,6 +65,23 @@ func r_get_register(c *gin.Context) {
 }
 
 func r_post_register(c *gin.Context) {
+	username := c.PostForm("username")
+
+	account, err := GetAccount(username)
+	if err != nil {
+		log.Printf("account not found")
+	} else {
+		log.Printf(fmt.Sprintf("account found %v", account))
+	}
+
+	password := c.PostForm("password")
+	password_confirmation := c.PostForm("password-confirmation")
+	email := c.PostForm("email")
+	firstname := c.PostForm("first_name")
+	lastname := c.PostForm("last_name")
+	country := c.PostForm("country")
+
+	log.Printf(password, password_confirmation, email, firstname, lastname, country)
 
 }
 

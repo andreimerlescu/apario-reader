@@ -7,6 +7,7 @@ import (
 	`path/filepath`
 	`time`
 
+	ai `github.com/andreimerlescu/go-apario-identifier`
 	go_textee `github.com/andreimerlescu/go-textee`
 )
 
@@ -37,7 +38,15 @@ func (tsp *TSPage) Save() error {
 
 	// page version control
 	// for document_version file will be = arg2=[<database>/<document-identifier-path>/pages/<page-identifier-path>]/versions/arg1=[<version>].json
-	db_path := filepath.Join(*flag_s_database, identifier_to_path(tsp.DocumentIdentifier), "pages", identifier_to_path(tsp.Identifier))
+	id, idErr := ai.ParseIdentifier(tsp.Identifier)
+	if idErr != nil {
+		return idErr
+	}
+	did, didErr := ai.ParseIdentifier(tsp.DocumentIdentifier)
+	if didErr != nil {
+		return didErr
+	}
+	db_path := filepath.Join(*flag_s_database, did.Path(), "pages", id.Path())
 	version, version_err := version_exists_in_database_path(tsp.Version.String(), db_path)
 	if version_err != nil {
 		log.Printf("%v", version_err)
@@ -69,7 +78,7 @@ func (tsp *TSPage) Save() error {
 			return pv_err
 		}
 	}
-	return write_to_file(filepath.Join(*flag_s_database, identifier_to_path(tsp.DocumentIdentifier), "pages", identifier_to_path(tsp.Identifier), "page.json"), tsp)
+	return write_to_file(filepath.Join(*flag_s_database, did.Path(), "pages", id.Path(), "page.json"), tsp)
 }
 
 // PageVersion is <documents.db>/<document-identifier-path>/pages/<page-identifier-path>/versions/<version>.json
@@ -89,5 +98,13 @@ func (pv *PageVersion) Save() error {
 		return err
 	}
 	defer pv.database_document.Unlock()
-	return write_to_file(filepath.Join(*flag_s_database, identifier_to_path(pv.DocumentIdentifier), "pages", identifier_to_path(pv.PageIdentifier), "versions", fmt.Sprintf("%s.json", pv.Version.String())), pv)
+	pid, pidErr := ai.ParseIdentifier(pv.PageIdentifier)
+	did, didErr := ai.ParseIdentifier(pv.DocumentIdentifier)
+	if pidErr != nil {
+		return pidErr
+	}
+	if didErr != nil {
+		return didErr
+	}
+	return write_to_file(filepath.Join(*flag_s_database, did.Path(), "pages", pid.Path(), "versions", fmt.Sprintf("%s.json", pv.Version.String())), pv)
 }

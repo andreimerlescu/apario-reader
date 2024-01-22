@@ -98,8 +98,8 @@ func handler_ensure_authenticated(c *gin.Context) {
 			return
 		}
 
-		account, load_err := load_username_account(username)
-		if load_err != nil {
+		account, loadErr := GetAccount(username)
+		if loadErr != nil {
 			f_session_flash(session, NewSessionAlert("error", "Authentication is required to proceed.", time.Now().Add(45*time.Second), true))
 			referer := c.GetHeader("Referer")
 			if len(referer) > 0 {
@@ -113,9 +113,9 @@ func handler_ensure_authenticated(c *gin.Context) {
 		account.LastFailedLogin = time.Now().UTC()
 		account.LastFailedLoginIP = net.IP(f_s_client_ip(c.Request))
 		account.FailedLoginAttempts = failed_attempts
-		err := store_username_account(account)
+		err := account.Save()
 		if err != nil {
-			log.Printf("failed to store_username_account for account %v", account)
+			return
 		}
 
 		if time.Since(last_failed_attempt) < time.Duration(fibonacci(failed_attempts))*time.Second*3 {
@@ -123,7 +123,7 @@ func handler_ensure_authenticated(c *gin.Context) {
 				account.Locked = true
 				account.LockedAt = time.Now().UTC()
 				account.LockedByIP = net.IP(f_s_client_ip(c.Request))
-				err := store_username_account(account)
+				err := account.Save()
 				if err != nil {
 					log.Printf("failed to store_username_account for account %v", account)
 				}

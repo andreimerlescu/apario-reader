@@ -1,7 +1,10 @@
 package main
 
 import (
+	`errors`
 	`fmt`
+	`strconv`
+	`unicode`
 )
 
 func ParseDDVersion(version string) (*DDVersion, error) {

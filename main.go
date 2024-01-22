@@ -4,7 +4,6 @@ import (
 	`context`
 	`flag`
 	`fmt`
-	`io/fs`
 	`log`
 	`log/slog`
 	`os`
@@ -80,42 +79,6 @@ func main() {
 	}
 
 	germinatedAt := time.Now().UTC()
-
-	// shard the database checksum directory
-	go func() {
-		err := filepath.Walk(*flag_s_database, func(path string, info fs.FileInfo, err error) error {
-			if err != nil {
-				return err
-			}
-
-			if info.IsDir() && len(info.Name()) == 1 && info.Name() != "." {
-				// beginning of a sharded directory
-				return nil
-			} else if info.IsDir() && len(info.Name()) == 64 {
-				// not yet sharded
-				err := shard_checksum_path(path, info)
-				if err != nil {
-					return err
-				}
-			} else if info.IsDir() && len(info.Name()) == 19 {
-				// last octet, meaning the complete checksum is the last
-				ok, err := check_path_checksum(path, *flag_s_database)
-				if !ok || err != nil {
-					return err
-				} else {
-					return nil
-				}
-			} else {
-				// other length directory, means keep walking until
-				return nil
-			}
-			return nil
-		})
-		if err != nil {
-			return
-		}
-
-	}()
 
 	go process_directories(ch_db_directories)
 

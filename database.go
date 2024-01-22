@@ -622,6 +622,7 @@ func load_file_into_payload(filename string, wg *sync.WaitGroup, mu *sync.RWMute
 }
 
 func write_to_file(filename string, payload any) error {
+
 	file, err := os.Create(filename)
 	if err != nil {
 		fmt.Println("Error opening file:", err)

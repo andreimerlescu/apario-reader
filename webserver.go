@@ -85,7 +85,7 @@ func NewWebServer(ctx context.Context) {
 		}
 
 		// gin logs
-		f, f_err := os.OpenFile(*flag_s_gin_log_file, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0666)
+		f, f_err := os.OpenFile(*flag_s_gin_log_file, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0600)
 		if f_err == nil { // no error received
 			if *flag_b_gin_log_to_stdout { // logging to STDOUT + log file
 				gin.DefaultWriter = io.MultiWriter(f, os.Stdout)

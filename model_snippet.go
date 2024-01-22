@@ -7,6 +7,7 @@ import (
 	`path/filepath`
 	`time`
 
+	ai `github.com/andreimerlescu/go-apario-identifier`
 	go_textee `github.com/andreimerlescu/go-textee`
 )
 
@@ -37,7 +38,11 @@ func (tss *TSSnippet) Save() error {
 
 	// snippet version control
 	// for snippet_version file will be = arg2=[<snippets.db>/<identifier-path>]/versions/arg1=[<version>].json
-	snippet_db_path := filepath.Join(*flag_s_snippets_database, identifier_to_path(tss.Identifier))
+	id, idErr := ai.ParseIdentifier(tss.Identifier)
+	if idErr != nil {
+		return idErr
+	}
+	snippet_db_path := filepath.Join(*flag_s_snippets_database, id.Path())
 	version, version_err := version_exists_in_database_path(tss.Version.String(), snippet_db_path)
 	if version_err != nil {
 		log.Printf("%v", version_err)
@@ -87,5 +92,9 @@ func (sv *SnippetVersion) Save() error {
 		return err
 	}
 	defer sv.database_document.Unlock()
-	return write_to_file(filepath.Join(*flag_s_snippets_database, identifier_to_path(sv.Identifier), "versions", fmt.Sprintf("%s.json", sv.Version.String())), sv)
+	id, idErr := ai.ParseIdentifier(sv.Identifier)
+	if idErr != nil {
+		return idErr
+	}
+	return write_to_file(filepath.Join(*flag_s_snippets_database, id.Path(), "versions", fmt.Sprintf("%s.json", sv.Version.String())), sv)
 }

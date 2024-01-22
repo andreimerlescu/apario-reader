@@ -28,6 +28,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	ai `github.com/andreimerlescu/go-apario-identifier`
 	cwg `github.com/andreimerlescu/go-countable-waitgroup`
 	sema `github.com/andreimerlescu/go-sema`
 	sch `github.com/andreimerlescu/go-smartchan`
@@ -43,6 +44,12 @@ const (
 
 var (
 	startedAt = time.Now().UTC()
+
+	valet_db_data     = ai.NewValet(*flag_s_database)
+	valet_db_users    = ai.NewValet(*flag_s_users_database_directory)
+	valet_db_snippets = ai.NewValet(*flag_s_snippets_database)
+	valet_db_textee   = ai.NewValet(*flag_s_textee_database_path)
+	valet_db_tags     = ai.NewValet(*flag_s_tag_database_path)
 
 	session_store = sessions.NewFilesystemStore(*flag_s_sessions_directory, []byte(*flag_s_session_secret))
 

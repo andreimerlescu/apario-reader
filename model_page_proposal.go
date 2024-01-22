@@ -3,6 +3,8 @@ package main
 import (
 	`fmt`
 	`path/filepath`
+
+	ai `github.com/andreimerlescu/go-apario-identifier`
 )
 
 // TSPageProposal will be loaded from reading <documents.db>/<document-identifier-path>/pages/<page-identifier-path>/proposals/<username>.json
@@ -39,5 +41,13 @@ func (tspp *TSPageProposal) Save() error {
 		return err
 	}
 	defer tspp.database_document.Unlock()
-	return write_to_file(filepath.Join(*flag_s_database, identifier_to_path(tspp.DocumentIdentifier), "pages", identifier_to_path(tspp.PageIdentifier), fmt.Sprintf("%s.json", tspp.Author)), tspp)
+	pid, pidErr := ai.ParseIdentifier(tspp.PageIdentifier)
+	did, didErr := ai.ParseIdentifier(tspp.DocumentIdentifier)
+	if pidErr != nil {
+		return pidErr
+	}
+	if didErr != nil {
+		return didErr
+	}
+	return write_to_file(filepath.Join(*flag_s_database, did.Path(), "pages", pid.Path(), fmt.Sprintf("%s.json", tspp.Author)), tspp)
 }

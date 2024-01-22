@@ -6,6 +6,8 @@ import (
 	`log`
 	`path/filepath`
 	`time`
+
+	ai `github.com/andreimerlescu/go-apario-identifier`
 )
 
 // TSDocument is <database>/<document-identifier-path>/document.json
@@ -31,7 +33,11 @@ func (tsd *TSDocument) Save() error {
 
 	// document version control
 	// for document_version file will be = arg2=[<database>/<document-identifier-path>]/versions/arg1=[<version>].json
-	db_path := filepath.Join(*flag_s_database, identifier_to_path(tsd.Identifier))
+	id, idErr := ai.ParseIdentifier(tsd.Identifier)
+	if idErr != nil {
+		return idErr
+	}
+	db_path := filepath.Join(*flag_s_database, id.Path())
 	version, version_err := version_exists_in_database_path(tsd.Version.String(), db_path)
 	if version_err != nil {
 		log.Printf("%v", version_err)
@@ -62,7 +68,7 @@ func (tsd *TSDocument) Save() error {
 			return dv_err
 		}
 	}
-	return write_to_file(filepath.Join(*flag_s_database, identifier_to_path(tsd.Identifier), "document.json"), tsd)
+	return write_to_file(filepath.Join(*flag_s_database, id.Path(), "document.json"), tsd)
 }
 
 func (tsd *TSDocument) CoverPageIdentifier() string {
@@ -89,5 +95,9 @@ func (dv *DocumentVersion) Save() error {
 		return err
 	}
 	defer dv.database_document.Unlock()
-	return write_to_file(filepath.Join(*flag_s_database, identifier_to_path(dv.Identifier), "versions", fmt.Sprintf("%s.json", dv.Version.String())), dv)
+	id, idErr := ai.ParseIdentifier(dv.Identifier)
+	if idErr != nil {
+		return idErr
+	}
+	return write_to_file(filepath.Join(*flag_s_database, id.Path(), "versions", fmt.Sprintf("%s.json", dv.Version.String())), dv)
 }
