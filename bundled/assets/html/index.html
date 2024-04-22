@@ -10,9 +10,9 @@
             <div class="text-center">
                 {{ render_partial "header" .dark_mode }}
             </div>
-            <div class="col-lg-6 mx-auto text-center">
+            <div class="col-lg-8 mx-auto text-center">
                 <p class="lead mb-4">Research {{ .total_documents }} documents containing over {{ .total_pages }} pages.</p>
-                <div class="d-grid gap-2 d-sm-flex justify-content-sm-center">
+                <div class="col-12">
                     <form class="form" action="/search" method="get">
                         <div class="input-group input-group-lg mb-3">
                             <span class="input-group-text">

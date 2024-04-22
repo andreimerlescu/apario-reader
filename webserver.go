@@ -46,6 +46,7 @@ func NewWebServer(ctx context.Context) {
 			"m_online_entry":        f_m_online_entry,
 			"online_cache_delay":    f_i_online_cache_delay,
 			"titleize":              f_s_titleize,
+			"hits":                  f_i_hits,
 			"get_pg_id_from_doc_id_def_id_and_cur_pg_num": f_s_get_page_identifier_from_document_identifier_default_identifier_and_current_page_number,
 		}
 		default_gin_func_vars = gin.H{
@@ -177,6 +178,10 @@ func NewWebServer(ctx context.Context) {
 
 		go clean_online_counter_scheduler(ctx)
 		go load_online_counter_cache_scheduler(ctx)
+
+		// Online hit counter
+		r.Use(middleware_count_hits())
+		go persist_hits_offline(ctx)
 
 		// Routes
 		r.GET("/", middleware_online_counter(), r_get_index)

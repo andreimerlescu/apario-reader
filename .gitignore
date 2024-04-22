@@ -14,3 +14,5 @@ idoread.windows.exe
 idoread.windows
 idoread.macos-*
 idoread.macos
+bin/*
+!bin/.keep
