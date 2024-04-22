@@ -4,8 +4,10 @@ import (
 	`context`
 	`crypto/sha256`
 	`encoding/hex`
+	`encoding/json`
 	`log`
 	`net`
+	`os`
 	`strings`
 	`sync`
 	`sync/atomic`
@@ -101,15 +103,83 @@ func f_s_filtered_ip(c *gin.Context) string {
 }
 
 func f_schedule_ip_ban_list_cleanup(ctx context.Context) {
-	ticker := time.NewTicker(time.Duration(*flag_i_ip_ban_list_synchronization) * time.Second)
+	ticker1 := time.NewTicker(time.Duration(*flag_i_ip_ban_list_synchronization) * time.Second)
+	ticker2 := time.NewTicker(6 * time.Minute) // every 3 minutes save to disk
+	ticker3 := time.NewTicker(7 * time.Minute) // every 6 minutes restore from disk
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case <-ticker.C:
+		case <-ticker1.C:
 			f_perform_ip_ban_list_cleanup(ctx)
-
+		case <-ticker2.C:
+			f_perform_ip_ban_fs_sync(ctx)
+		case <-ticker3.C:
+			f_perform_ip_ban_fs_load(ctx)
 		}
+	}
+}
+
+func f_perform_ip_ban_fs_load(ctx context.Context) {
+	ipFile, openErr := os.OpenFile(*flag_s_ip_ban_file, os.O_RDONLY, 0600)
+	if openErr != nil {
+		log.Printf("Error opening IP ban file: %v", openErr)
+		return
+	}
+	defer ipFile.Close()
+
+	if ctx.Err() != nil {
+		log.Println("Operation cancelled:", ctx.Err())
+		return
+	}
+
+	var results ts_ip_save
+	decoder := json.NewDecoder(ipFile)
+	if err := decoder.Decode(&results); err != nil {
+		log.Printf("Error decoding IP ban list: %v", err)
+		return
+	}
+
+	mu_ip_ban_list.Lock()
+	defer mu_ip_ban_list.Unlock()
+	for key, entry := range results.Entries {
+		if ctx.Err() != nil {
+			log.Println("Operation cancelled during processing:", ctx.Err())
+			return
+		}
+		ip := net.ParseIP(key)
+		if ip != nil {
+			m_ip_ban_list = append(m_ip_ban_list, ip)
+			updateWatchCounter(ip, entry.Counter)
+		}
+	}
+}
+
+func f_perform_ip_ban_fs_sync(ctx context.Context) {
+	mu_ip_ban_list.RLock()
+	var results ts_ip_save
+	results.Entries = make(map[string]ts_ip_save_entry)
+	for _, ip := range m_ip_ban_list {
+		if ctx.Err() != nil {
+			log.Println("Operation cancelled before file operations:", ctx.Err())
+			mu_ip_ban_list.RUnlock()
+			return
+		}
+		ipStr := ip.String()
+		results.Entries[ipStr] = ts_ip_save_entry{IP: ip, Counter: getCurrentCounter(ipStr)}
+	}
+	mu_ip_ban_list.RUnlock()
+
+	ipFile, openErr := os.OpenFile(*flag_s_ip_ban_file, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0600)
+	if openErr != nil {
+		log.Printf("Error opening IP ban file for writing: %v", openErr)
+		return
+	}
+	defer ipFile.Close()
+
+	encoder := json.NewEncoder(ipFile)
+	if err := encoder.Encode(results); err != nil {
+		log.Printf("Error encoding IP ban list: %v", err)
 	}
 }
 
@@ -181,4 +251,28 @@ func Sha256(in string) (checksum string) {
 	hash.Write([]byte(in))
 	checksum = hex.EncodeToString(hash.Sum(nil))
 	return checksum
+}
+
+func updateWatchCounter(ip net.IP, count int64) {
+	mu_ip_watch_list.Lock()
+	defer mu_ip_watch_list.Unlock()
+
+	ipStr := ip.String()
+	counter, found := m_ip_watch_list[ipStr]
+	if !found {
+		// Initialize the counter if it does not exist
+		m_ip_watch_list[ipStr] = new(atomic.Int64)
+		counter = m_ip_watch_list[ipStr]
+	}
+	counter.Store(count) // Set the counter to the specific value
+}
+
+func getCurrentCounter(ipStr string) int64 {
+	mu_ip_watch_list.RLock()
+	defer mu_ip_watch_list.RUnlock()
+
+	if counter, found := m_ip_watch_list[ipStr]; found {
+		return counter.Load()
+	}
+	return 0
 }

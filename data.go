@@ -153,30 +153,6 @@ var (
 	m_location_states  []Location
 	mu_location_states = sync.RWMutex{}
 
-	// old maps
-	m_months = map[string]time.Month{
-		"jan": time.January, "january": time.January, "01": time.January, "1": time.January,
-		"feb": time.February, "february": time.February, "02": time.February, "2": time.February,
-		"mar": time.March, "march": time.March, "03": time.March, "3": time.March,
-		"apr": time.April, "april": time.April, "04": time.April, "4": time.April,
-		"may": time.May, "05": time.May, "5": time.May,
-		"jun": time.June, "june": time.June, "06": time.June, "6": time.June,
-		"jul": time.July, "july": time.July, "07": time.July, "7": time.July,
-		"aug": time.August, "august": time.August, "08": time.August, "8": time.August,
-		"sep": time.September, "september": time.September, "09": time.September, "9": time.September,
-		"oct": time.October, "october": time.October, "10": time.October,
-		"nov": time.November, "november": time.November, "11": time.November,
-		"dec": time.December, "december": time.December, "12": time.December,
-	}
-
-	// Regex
-	re_date1 = regexp.MustCompile(`(?i)(\d{1,2})(st|nd|rd|th)?\s(?:of\s)?(January|Jan|February|Feb|March|Mar|April|Apr|May|June|Jun|July|Jul|August|Aug|September|Sep|October|Oct|November|Nov|December|Dec),?\s(\d{2,4})`)
-	re_date2 = regexp.MustCompile(`(?i)(\d{1,2})\/(\d{1,2})\/(\d{2,4})`)
-	re_date3 = regexp.MustCompile(`(?i)(January|Jan|February|Feb|March|Mar|April|Apr|May|June|Jun|July|Jul|August|Aug|September|Sep|October|Oct|November|Nov|December|Dec),?\s(\d{2,4})`)
-	re_date5 = regexp.MustCompile(`(?i)(January|Jan|February|Feb|March|Mar|April|Apr|May|June|Jun|July|Jul|August|Aug|September|Sep|October|Oct|November|Nov|December|Dec)\s(\d{1,2})(st|nd|rd|th)?,?\s(\d{2,4})`)
-	re_date4 = regexp.MustCompile(`(?i)(January|Jan|February|Feb|March|Mar|April|Apr|May|June|Jun|July|Jul|August|Aug|September|Sep|October|Oct|November|Nov|December|Dec)\s(\d{4})`)
-	re_date6 = regexp.MustCompile(`(\d{4})`)
-
 	// Security
 	mu_ip_watch_list = &sync.RWMutex{}
 	m_ip_watch_list  = map[string]*atomic.Int64{}

@@ -92,6 +92,7 @@ var (
 	flag_s_security_txt_path                       = config.NewString("security-txt-path", "", "Relative path to override the /security.txt entry that helps fight fraud.")
 	flag_b_enable_ip_ban_list                      = config.NewBool("enable-middleware-ip-ban-list", true, "Enable the middleware for ip ban list.")
 	flag_i_ip_ban_list_synchronization             = config.NewInt("ip-ban-list-sync-delay", 3600, "seconds between synchronizing the ip ban list to disk")
+	flag_s_ip_ban_file                             = config.NewString("ip-ban-file", filepath.Join(".", "database", "ip.db"), "File that contains JSON encoded values for the IP Ban list.")
 	flag_i_online_refresh_delay_minutes            = config.NewInt("online-refresh-delay-minutes", 17, "seconds to count active online users before offline cut-off. 369 seconds = 6 minutes 9 seconds = default")
 	flag_s_no_route_path_watch_list                = config.NewString("no-route-path-watch-list", "", "Pipe separated string of routes that should trigger an IP ban if too many are received.")
 	flag_s_no_route_path_contains_watch_list       = config.NewString("no-route-path-contains-watch-list", "", "Pipe separated string of partial routes that should trigger an IP ban if too many are received.")

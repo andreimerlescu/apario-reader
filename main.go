@@ -127,7 +127,7 @@ func main() {
 
 	slog.Info("done loading the application's database into memory")
 
-	go sync_user_directory(ctx)
+	// go sync_user_directory(ctx)
 
 	go NewWebServer(ctx)
 

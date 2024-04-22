@@ -1,11 +1,9 @@
 package main
 
 import (
-	`fmt`
 	`log`
 	`net`
 	`net/http`
-	`net/url`
 	"strings"
 	`sync/atomic`
 	`time`
@@ -38,110 +36,110 @@ func handler_wait_for_database(c *gin.Context) {
 }
 
 func handler_ensure_authenticated(c *gin.Context) {
-	err := f_gin_check_authenticated_in_session(c)
-	if err != nil {
-		session := g_get_session(c)
-		var last_failed_attempt time.Time
-		_, last_failed_attempts_exist := session.Values["last_failed_login_attempt"]
-		if !last_failed_attempts_exist {
-			f_session_flash(session, NewSessionAlert("error", "Authentication is required to proceed.", time.Now().Add(45*time.Second), true))
-			referer := c.GetHeader("Referer")
-			if len(referer) > 0 {
-				c.Redirect(http.StatusOK, fmt.Sprintf("/login?from=%v", url.PathEscape(referer)))
-				return
-			}
-			c.Redirect(http.StatusOK, "/login")
-			return
-		}
-
-		var valid_format bool
-		last_failed_attempt, valid_format = session.Values["last_failed_login_attempt"].(time.Time)
-		if !valid_format {
-			session.Values["last_failed_login_attempt"] = time.Now().UTC()
-		}
-
-		var failed_attempts int
-		var next_failed_attempts int
-		_, failed_attempts_exists := session.Values["failed_attempts"]
-		if failed_attempts_exists {
-			last_value, valid_value := session.Values["failed_attempts"].(int)
-			if !valid_value {
-				session.Values["failed_attempts"] = 1
-			} else {
-				failed_attempts = last_value
-				next_failed_attempts = last_value + 1
-				session.Values["failed_attempts"] = next_failed_attempts
-			}
-		}
-
-		maybe_username, username_exists := session.Values["username"]
-		if !username_exists {
-			f_session_flash(session, NewSessionAlert("error", "Authentication is required to proceed.", time.Now().Add(45*time.Second), true))
-			referer := c.GetHeader("Referer")
-			if len(referer) > 0 {
-				c.Redirect(http.StatusOK, fmt.Sprintf("/login?from=%v", url.PathEscape(referer)))
-				return
-			}
-			c.Redirect(http.StatusOK, "/login")
-			return
-		}
-
-		username, is_username := maybe_username.(string)
-		if !is_username {
-			f_session_flash(session, NewSessionAlert("error", "Authentication is required to proceed.", time.Now().Add(45*time.Second), true))
-			referer := c.GetHeader("Referer")
-			if len(referer) > 0 {
-				c.Redirect(http.StatusOK, fmt.Sprintf("/login?from=%v", url.PathEscape(referer)))
-				return
-			}
-			c.Redirect(http.StatusOK, "/login")
-			return
-		}
-
-		account, loadErr := GetAccount(username)
-		if loadErr != nil {
-			f_session_flash(session, NewSessionAlert("error", "Authentication is required to proceed.", time.Now().Add(45*time.Second), true))
-			referer := c.GetHeader("Referer")
-			if len(referer) > 0 {
-				c.Redirect(http.StatusOK, fmt.Sprintf("/login?from=%v", url.PathEscape(referer)))
-				return
-			}
-			c.Redirect(http.StatusOK, "/login")
-			return
-		}
-
-		account.LastFailedLogin = time.Now().UTC()
-		account.LastFailedLoginIP = net.IP(f_s_client_ip(c.Request))
-		account.FailedLoginAttempts = failed_attempts
-		err := account.Save()
-		if err != nil {
-			return
-		}
-
-		if time.Since(last_failed_attempt) < time.Duration(fibonacci(failed_attempts))*time.Second*3 {
-			if failed_attempts >= *flag_i_auth_max_failed_logins {
-				account.Locked = true
-				account.LockedAt = time.Now().UTC()
-				account.LockedByIP = net.IP(f_s_client_ip(c.Request))
-				err := account.Save()
-				if err != nil {
-					log.Printf("failed to store_username_account for account %v", account)
-				}
-			}
-			f_session_flash(session, NewSessionAlert("error", fmt.Sprintf("You must wait %.0f seconds before trying to sign in again.", time.Since(last_failed_attempt).Seconds()), time.Now().Add(45*time.Second), true))
-			c.Redirect(http.StatusOK, "/login")
-			return
-		}
-
-		f_session_flash(session, NewSessionAlert("error", "Authentication is required to proceed.", time.Now().Add(45*time.Second), true))
-		referer := c.GetHeader("Referer")
-		if len(referer) > 0 {
-			c.Redirect(http.StatusOK, fmt.Sprintf("/login?from=%v", url.PathEscape(referer)))
-			return
-		}
-		c.Redirect(http.StatusOK, "/login")
-		return
-	}
+	//err := f_gin_check_authenticated_in_session(c)
+	//if err != nil {
+	//	session := g_get_session(c)
+	//	var last_failed_attempt time.Time
+	//	_, last_failed_attempts_exist := session.Values["last_failed_login_attempt"]
+	//	if !last_failed_attempts_exist {
+	//		f_session_flash(session, NewSessionAlert("error", "Authentication is required to proceed.", time.Now().Add(45*time.Second), true))
+	//		referer := c.GetHeader("Referer")
+	//		if len(referer) > 0 {
+	//			c.Redirect(http.StatusOK, fmt.Sprintf("/login?from=%v", url.PathEscape(referer)))
+	//			return
+	//		}
+	//		c.Redirect(http.StatusOK, "/login")
+	//		return
+	//	}
+	//
+	//	var valid_format bool
+	//	last_failed_attempt, valid_format = session.Values["last_failed_login_attempt"].(time.Time)
+	//	if !valid_format {
+	//		session.Values["last_failed_login_attempt"] = time.Now().UTC()
+	//	}
+	//
+	//	var failed_attempts int
+	//	var next_failed_attempts int
+	//	_, failed_attempts_exists := session.Values["failed_attempts"]
+	//	if failed_attempts_exists {
+	//		last_value, valid_value := session.Values["failed_attempts"].(int)
+	//		if !valid_value {
+	//			session.Values["failed_attempts"] = 1
+	//		} else {
+	//			failed_attempts = last_value
+	//			next_failed_attempts = last_value + 1
+	//			session.Values["failed_attempts"] = next_failed_attempts
+	//		}
+	//	}
+	//
+	//	maybe_username, username_exists := session.Values["username"]
+	//	if !username_exists {
+	//		f_session_flash(session, NewSessionAlert("error", "Authentication is required to proceed.", time.Now().Add(45*time.Second), true))
+	//		referer := c.GetHeader("Referer")
+	//		if len(referer) > 0 {
+	//			c.Redirect(http.StatusOK, fmt.Sprintf("/login?from=%v", url.PathEscape(referer)))
+	//			return
+	//		}
+	//		c.Redirect(http.StatusOK, "/login")
+	//		return
+	//	}
+	//
+	//	username, is_username := maybe_username.(string)
+	//	if !is_username {
+	//		f_session_flash(session, NewSessionAlert("error", "Authentication is required to proceed.", time.Now().Add(45*time.Second), true))
+	//		referer := c.GetHeader("Referer")
+	//		if len(referer) > 0 {
+	//			c.Redirect(http.StatusOK, fmt.Sprintf("/login?from=%v", url.PathEscape(referer)))
+	//			return
+	//		}
+	//		c.Redirect(http.StatusOK, "/login")
+	//		return
+	//	}
+	//
+	//	account, loadErr := GetAccount(username)
+	//	if loadErr != nil {
+	//		f_session_flash(session, NewSessionAlert("error", "Authentication is required to proceed.", time.Now().Add(45*time.Second), true))
+	//		referer := c.GetHeader("Referer")
+	//		if len(referer) > 0 {
+	//			c.Redirect(http.StatusOK, fmt.Sprintf("/login?from=%v", url.PathEscape(referer)))
+	//			return
+	//		}
+	//		c.Redirect(http.StatusOK, "/login")
+	//		return
+	//	}
+	//
+	//	account.LastFailedLogin = time.Now().UTC()
+	//	account.LastFailedLoginIP = net.IP(f_s_client_ip(c.Request))
+	//	account.FailedLoginAttempts = failed_attempts
+	//	err := account.Save()
+	//	if err != nil {
+	//		return
+	//	}
+	//
+	//	if time.Since(last_failed_attempt) < time.Duration(fibonacci(failed_attempts))*time.Second*3 {
+	//		if failed_attempts >= *flag_i_auth_max_failed_logins {
+	//			account.Locked = true
+	//			account.LockedAt = time.Now().UTC()
+	//			account.LockedByIP = net.IP(f_s_client_ip(c.Request))
+	//			err := account.Save()
+	//			if err != nil {
+	//				log.Printf("failed to store_username_account for account %v", account)
+	//			}
+	//		}
+	//		f_session_flash(session, NewSessionAlert("error", fmt.Sprintf("You must wait %.0f seconds before trying to sign in again.", time.Since(last_failed_attempt).Seconds()), time.Now().Add(45*time.Second), true))
+	//		c.Redirect(http.StatusOK, "/login")
+	//		return
+	//	}
+	//
+	//	f_session_flash(session, NewSessionAlert("error", "Authentication is required to proceed.", time.Now().Add(45*time.Second), true))
+	//	referer := c.GetHeader("Referer")
+	//	if len(referer) > 0 {
+	//		c.Redirect(http.StatusOK, fmt.Sprintf("/login?from=%v", url.PathEscape(referer)))
+	//		return
+	//	}
+	//	c.Redirect(http.StatusOK, "/login")
+	//	return
+	//}
 }
 
 func handler_force_https(c *gin.Context) {
