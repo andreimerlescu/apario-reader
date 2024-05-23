@@ -157,13 +157,15 @@ func handler_online_counter(c *gin.Context) {
 	mu_online_list.RLock()
 	entry, exists := m_online_list[ip]
 	mu_online_list.RUnlock()
+	nip := net.IP(ip)
 	if !exists {
 		mu_online_list.Lock()
-		m_online_list[ip] = online_entry{
+		m_online_list[nip.String()] = online_entry{
 			UserAgent:     c.Request.Header.Get("User-Agent"),
-			IP:            net.IP(ip),
+			IP:            nip,
 			FirstAction:   time.Now().UTC(),
 			LastAction:    time.Now().UTC(),
+			DeleteOn:      time.Now().UTC().Add(time.Duration(*flag_i_online_refresh_delay_minutes) * time.Minute),
 			Hits:          &atomic.Int64{},
 			LastPath:      c.Request.URL.Path,
 			Authenticated: false,
@@ -172,18 +174,17 @@ func handler_online_counter(c *gin.Context) {
 			Reputation:    0,
 		}
 		mu_online_list.Unlock()
-		c.Next()
-		return
+	} else {
+		entry.Hits.Add(1)
+		entry.LastPath = c.Request.URL.Path
+		entry.LastAction = time.Now().UTC()
+		entry.DeleteOn = time.Now().UTC().Add(time.Duration(*flag_i_online_refresh_delay_minutes) * time.Minute)
+		entry.UserAgent = c.Request.Header.Get("User-Agent")
+
+		mu_online_list.Lock()
+		m_online_list[nip.String()] = entry
+		mu_online_list.Unlock()
 	}
-
-	entry.Hits.Add(1)
-	entry.LastPath = c.Request.URL.Path
-	entry.LastAction = time.Now().UTC()
-	entry.UserAgent = c.Request.Header.Get("User-Agent")
-
-	mu_online_list.Lock()
-	m_online_list[ip] = entry
-	mu_online_list.Unlock()
 }
 
 func handler_tls_handshake(c *gin.Context) {

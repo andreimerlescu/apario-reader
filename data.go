@@ -228,6 +228,7 @@ type online_entry struct {
 	IP            net.IP        `json:"ip"`
 	FirstAction   time.Time     `json:"fa"`
 	LastAction    time.Time     `json:"la"`
+	DeleteOn      time.Time     `json:"do"`
 	Hits          *atomic.Int64 `json:"h"`
 	LastPath      string        `json:"lp"`
 	Authenticated bool          `json:"au"`

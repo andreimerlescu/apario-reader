@@ -1,4 +1,4 @@
-.PHONY: install build run dbuild drun dbash containered
+.PHONY: install build publish
 
 PROJECT = badbitchreads
 
@@ -11,6 +11,5 @@ build:
 	GOOS=darwin GOARCH=amd64 go build -a -v -o bin/idoread.macos-amd64 .
 	GOOS=windows GOARCH=amd64 go build -a -v -o bin/idoread.windows-amd64.exe .
 
-publish:
-	GOOS=linux GOARCH=amd64 go build -o idoread.linux .
-	scp -i ~/.ssh/idoread.com/rsync_id_ed25519 idoread.linux idoread@idoread.com:~/idoread.linux
+publish: build
+	scp -i ~/.ssh/idoread.com/rsync_id_ed25519 bin/idoread.linux-amd64 idoread@idoread.com:~/idoread.linux-amd64.v1.0.0
