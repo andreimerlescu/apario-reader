@@ -206,61 +206,61 @@ func NewWebServer(ctx context.Context) {
 		r.GET("/dark", middleware_online_counter(), r_get_dark)
 		r.GET("/light", middleware_online_counter(), r_get_light)
 
-		//// devise inspired authentication
-		//r.GET("/profile/:username", r_get_public_profile)
-		//r_account_group := r.Group("/account")
-		//{
-		//	// added security
-		//	r_account_group.Use(middleware_force_https())             // force https for all /account related actions
-		//	r_account_group.Use(middleware_enforce_ip_ban_list())     // re-run for all /account related actions
-		//	r_account_group.Use(middleware_use_authenticity_tokens()) // ensure that the authenticity token exists within the session for validation
-		//
-		//	// login
-		//	r_account_group.GET("/login", r_get_login)
-		//	r_account_group.POST("/login", middleware_enforce_authenticity_token(), r_post_login)
-		//
-		//	// log out
-		//	r_account_group.GET("/logout", r_get_logout)
-		//	r_account_group.DELETE("/logout", middleware_enforce_authenticity_token(), r_get_logout)
-		//	r_account_group.DELETE("/session", middleware_enforce_authenticity_token(), r_get_logout)
-		//
-		//	// for the remainder of the routes, use this middleware
-		//	r_account_group.Use(middleware_ensure_authenticated())
-		//
-		//	// update profile
-		//	r_account_group.GET("/profile", r_get_manage_profile)
-		//
-		//	// new account
-		//	r_account_group.GET("/register", r_get_register)
-		//	r_account_group.POST("/register", middleware_enforce_authenticity_token(), r_post_register)
-		//
-		//	// change account email
-		//	r_account_group.GET("/email", r_get_change_email)
-		//	r_account_group.POST("/email", r_post_change_email)
-		//
-		//	// challenge user for account password with redirect
-		//	r_account_group.GET("/challenge", r_get_challenge_password)
-		//	r_account_group.POST("/challenge", middleware_enforce_authenticity_token(), r_post_challenge_password)
-		//
-		//	// enforce account bans
-		//	r_account_group.GET("/banned", r_get_account_banned)
-		//
-		//	// enforce account locks
-		//	r_account_group.GET("/locked", r_get_account_locked)
-		//
-		//	// change password
-		//	r_account_group.GET("/reset", r_get_forgot_password)
-		//	r_account_group.POST("/reset", middleware_enforce_authenticity_token(), r_post_forgot_password)
-		//
-		//	// download account data
-		//	r_account_group.GET("/download", r_get_download_account_data)
-		//	r_account_group.POST("/download", middleware_enforce_authenticity_token(), r_post_download_account_data)
-		//
-		//	// delete account data
-		//	r_account_group.GET("/delete", r_get_request_account_deletion)
-		//	r_account_group.POST("/delete", middleware_enforce_authenticity_token(), r_post_request_account_deletion)
-		//	r_account_group.DELETE("/delete", middleware_enforce_authenticity_token(), r_get_request_account_deletion)
-		//}
+		// devise inspired authentication
+		r.GET("/profile/:username", r_get_public_profile)
+		r_account_group := r.Group("/account")
+		{
+			// added security
+			r_account_group.Use(middleware_force_https())             // force https for all /account related actions
+			r_account_group.Use(middleware_enforce_ip_ban_list())     // re-run for all /account related actions
+			r_account_group.Use(middleware_use_authenticity_tokens()) // ensure that the authenticity token exists within the session for validation
+
+			// login
+			r_account_group.GET("/login", r_get_login)
+			r_account_group.POST("/login", middleware_enforce_authenticity_token(), r_post_login)
+
+			// log out
+			r_account_group.GET("/logout", r_get_logout)
+			r_account_group.DELETE("/logout", middleware_enforce_authenticity_token(), r_get_logout)
+			r_account_group.DELETE("/session", middleware_enforce_authenticity_token(), r_get_logout)
+
+			// for the remainder of the routes, use this middleware
+			r_account_group.Use(middleware_ensure_authenticated())
+
+			// update profile
+			r_account_group.GET("/profile", r_get_manage_profile)
+
+			// new account
+			r_account_group.GET("/register", r_get_register)
+			r_account_group.POST("/register", middleware_enforce_authenticity_token(), r_post_register)
+
+			// change account email
+			r_account_group.GET("/email", r_get_change_email)
+			r_account_group.POST("/email", r_post_change_email)
+
+			// challenge user for account password with redirect
+			r_account_group.GET("/challenge", r_get_challenge_password)
+			r_account_group.POST("/challenge", middleware_enforce_authenticity_token(), r_post_challenge_password)
+
+			// enforce account bans
+			r_account_group.GET("/banned", r_get_account_banned)
+
+			// enforce account locks
+			r_account_group.GET("/locked", r_get_account_locked)
+
+			// change password
+			r_account_group.GET("/reset", r_get_forgot_password)
+			r_account_group.POST("/reset", middleware_enforce_authenticity_token(), r_post_forgot_password)
+
+			// download account data
+			r_account_group.GET("/download", r_get_download_account_data)
+			r_account_group.POST("/download", middleware_enforce_authenticity_token(), r_post_download_account_data)
+
+			// delete account data
+			r_account_group.GET("/delete", r_get_request_account_deletion)
+			r_account_group.POST("/delete", middleware_enforce_authenticity_token(), r_post_request_account_deletion)
+			r_account_group.DELETE("/delete", middleware_enforce_authenticity_token(), r_get_request_account_deletion)
+		}
 
 		r.NoRoute(handler_no_route_linter())
 

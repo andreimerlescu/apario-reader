@@ -12,4 +12,4 @@ build:
 	GOOS=windows GOARCH=amd64 go build -a -v -o bin/idoread.windows-amd64.exe .
 
 publish: build
-	scp -i ~/.ssh/idoread.com/rsync_id_ed25519 bin/idoread.linux-amd64 idoread@idoread.com:~/idoread.linux-amd64.v1.0.0
+	scp -i ~/.ssh/idoread.com/rsync_id_ed25519 bin/idoread.linux-amd64 idoread@idoread.com:~/idoread.linux-amd64.v1.0.2

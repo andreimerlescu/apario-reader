@@ -42,9 +42,9 @@ func load_online_counter_cache_scheduler(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			mu_online_list.RLock()
+			mu_online_list.Lock()
 			a_i_cached_online_counter.Store(int64(len(m_online_list)))
-			mu_online_list.RUnlock()
+			mu_online_list.Unlock()
 		}
 	}
 }
