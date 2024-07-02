@@ -1,10 +1,10 @@
 ---
 database: "/Users/araven/Documents/code/projects/apario-reader/stargate-tmp"
-buffer: 3301
-limiter: 3301
-directories-limiter: 13000
-pages-limiter: 93000
-directory-buffer: 13000
+buffer: 9999
+limiter: 9999
+directories-limiter: 99999
+pages-limiter: 999999
+directory-buffer: 99999
 site-title: DEV - I Do Read
 enable-cors: false
 enable-csp: false

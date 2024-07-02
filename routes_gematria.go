@@ -24,7 +24,6 @@ func r_get_gematria(c *gin.Context) {
 
 	score, score_err := strconv.Atoi(score_str)
 	if score_err != nil {
-		log.Printf("score_err = %v", score_err)
 		c.String(http.StatusForbidden, "invalid score")
 		return
 	}

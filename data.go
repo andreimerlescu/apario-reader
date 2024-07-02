@@ -93,6 +93,7 @@ var (
 	m_collection_documents  = make(map[string]map[string]Document) // map[CollectionName][DocumentIdentifier]Document{}
 	mu_collection_documents = sync.RWMutex{}
 
+	// convert_database COMPLETED
 	m_word_pages  = make(map[string]map[string]struct{}) // map[word]map[PageIdentifier]struct{}
 	mu_word_pages = sync.RWMutex{}
 

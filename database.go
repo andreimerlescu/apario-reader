@@ -625,7 +625,7 @@ func write_to_file(filename string, payload any) error {
 
 	file, err := os.Create(filename)
 	if err != nil {
-		fmt.Println("Error opening file:", err)
+		fmt.Printf("Error opening file %v: %v", filename, err)
 		return err
 	}
 	defer file.Close()
@@ -653,7 +653,7 @@ func write_to_file(filename string, payload any) error {
 func write_any_to_file(database string, filename string, payload any) error {
 	file, err := os.Create(filepath.Join(database, filename))
 	if err != nil {
-		fmt.Println("Error opening file:", err)
+		fmt.Printf("Error opening file %v: %v", filename, err)
 		return err
 	}
 	defer file.Close()
@@ -683,7 +683,7 @@ func write_payload_to_file(filename string, wg *sync.WaitGroup, mu *sync.RWMutex
 	defer wg.Done()
 	mu.Lock()
 	defer mu.Unlock()
-	err := write_any_to_file(filename, *flag_s_persistent_database_file, payload)
+	err := write_any_to_file(*flag_s_persistent_database_file, filename, payload)
 	if err != nil {
 		return
 	}

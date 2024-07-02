@@ -129,6 +129,8 @@ func main() {
 
 	// go sync_user_directory(ctx)
 
+	convert_database()
+
 	go NewWebServer(ctx)
 
 	for {
