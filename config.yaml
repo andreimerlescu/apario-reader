@@ -1,7 +1,0 @@
----
-database: "database/stargate"
-buffer: 369
-limit: 369
-directories-limiter: 41
-pages-limiter: 1107
-directory-buffer: 1107
