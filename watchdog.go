@@ -1,56 +1,52 @@
 package main
 
 import (
-	`context`
-	`fmt`
-	`log`
-	`os`
-	`os/exec`
-	`runtime`
-	`strconv`
-	`strings`
-	`time`
+	"context"
+	"fmt"
+	"os"
+	"os/exec"
+	"runtime"
+	"strconv"
+	"strings"
+	"time"
 )
 
-func watch_for_signal(watchdog chan os.Signal, logFile *os.File, cancel context.CancelFunc) {
+func watch_for_signal(watchdog chan os.Signal, cancel context.CancelFunc) {
 	<-watchdog
-	log.Printf("watchdog signal received")
+	fmt.Println("watchdog signal received")
 	wg_active_tasks.PreventAdd()
 	err := ch_webserver_done.Write(struct{}{})
 	if err != nil {
-		log.Printf("cant close ch_webserver_done")
+		_, _ = fmt.Fprintln(os.Stderr, "cant close ch_webserver_done")
 	}
-	err = logFile.Close()
-	if err != nil {
-		log.Printf("failed to close the logFile due to error: %v", err)
-	}
+	closeLogFiles()
 	cancel()
 
 	if !sem_analyze_pages.IsEmpty() {
-		log.Printf("sem_analyze_pages has %d items left inside it", sem_analyze_pages.Len())
+		_, _ = fmt.Fprintf(os.Stderr, "sem_analyze_pages has %d items left inside it\n", sem_analyze_pages.Len())
 	}
 
 	if !sem_db_directories.IsEmpty() {
-		log.Printf("sem_db_directories has %d items left inside it", sem_db_directories.Len())
+		_, _ = fmt.Fprintf(os.Stderr, "sem_db_directories has %d items left inside it\n", sem_db_directories.Len())
 	}
 
 	ch_db_directories.Close()
 	ch_cert_reloader_cancel.Close()
 	ch_webserver_done.Close()
 
-	fmt.Printf("Completed running in %d", time.Since(startedAt))
+	fmt.Printf("Completed running in %d\n", time.Since(startedAt))
 
 	var cmd *exec.Cmd
 	switch runtime.GOOS {
 	case "windows":
-		cmd = exec.Command("tasklist", "/FI", "IMAGENAME eq apario-contribution.exe")
+		cmd = exec.Command("tasklist", "/FI", "IMAGENAME eq apario-reader.exe")
 	default:
-		cmd = exec.Command("pgrep", "apario-contribution")
+		cmd = exec.Command("pgrep", "apario-reader")
 	}
 
 	output, err := cmd.Output()
 	if err != nil {
-		fmt.Println("Error:", err)
+		_, _ = fmt.Fprintf(os.Stderr, "error: %+v\n", err)
 		return
 	}
 
@@ -73,6 +69,8 @@ func find_process_identifiers(output string) []int {
 			pid, err := strconv.Atoi(fields[1])
 			if err == nil {
 				pids = append(pids, pid)
+			} else {
+				_, _ = fmt.Fprintln(os.Stderr, err)
 			}
 		}
 	}
@@ -86,6 +84,6 @@ func terminate_process_identifier(pid int) {
 	cmd.Stderr = os.Stderr
 	err := cmd.Run()
 	if err != nil {
-		fmt.Println("Error terminating PID", pid, ":", err)
+		_, _ = fmt.Fprintf(os.Stderr, "Error terminating PID %v: %+v", pid, err)
 	}
 }

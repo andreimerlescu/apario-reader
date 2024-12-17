@@ -2,12 +2,12 @@ package main
 
 import (
 	"bytes"
-	`fmt`
+	"fmt"
 	"io"
-	`log`
-	`os`
-	`path/filepath`
-	`strings`
+	"log"
+	"os"
+	"path/filepath"
+	"strings"
 	"sync"
 	"sync/atomic"
 )
@@ -67,7 +67,7 @@ func convert_m_document_total_pages(wg *sync.WaitGroup) {
 	defer func(files Grouping) {
 		for _, group := range files {
 			if err := group.CloseAll(); err != nil {
-				log.Println(err)
+				log_boot.Trace(err)
 			}
 		}
 	}(files)
@@ -121,15 +121,14 @@ func convert_m_document_total_pages(wg *sync.WaitGroup) {
 
 			// ensure that the data's directory exists for the batch bin of data
 			if err := os.MkdirAll(dirPath, os.ModePerm); err != nil {
-				log.Printf("error creating directory %v: %v", dirPath, err)
+				log_boot.Tracef("error creating directory %v: %v", dirPath, err)
 				return
 			}
 
 			// open the file for writing with append and create mode enabled
 			f, err := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 			if err != nil {
-				log.Println(fileName)
-				log.Printf("error opening file %v: %v", filePath, err)
+				log_boot.Tracef("fileName: %+v\nerror opening file %v: %v", fileName, filePath, err)
 				return
 			}
 
@@ -142,7 +141,7 @@ func convert_m_document_total_pages(wg *sync.WaitGroup) {
 
 		// write content to file
 		if _, err := group.File.WriteString(content); err != nil {
-			log.Printf("Error writing to file: %v", err)
+			log_boot.Tracef("Error writing to file: %v", err)
 		}
 
 		// assign group to files[tag]
@@ -159,7 +158,7 @@ func convert_m_document_source_url(wg *sync.WaitGroup) {
 	defer func(files Grouping) {
 		for _, group := range files {
 			if err := group.CloseAll(); err != nil {
-				log.Println(err)
+				log_boot.Trace(err)
 			}
 		}
 	}(files)
@@ -213,15 +212,14 @@ func convert_m_document_source_url(wg *sync.WaitGroup) {
 
 			// ensure that the data's directory exists for the batch bin of data
 			if err := os.MkdirAll(dirPath, os.ModePerm); err != nil {
-				log.Printf("error creating directory %v: %v", dirPath, err)
+				log_boot.Tracef("error creating directory %v: %v", dirPath, err)
 				return
 			}
 
 			// open the file for writing with append and create mode enabled
 			f, err := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 			if err != nil {
-				log.Println(fileName)
-				log.Printf("error opening file %v: %v", filePath, err)
+				log_boot.Tracef("fileName: %+v\nerror opening file %v: %v", fileName, filePath, err)
 				return
 			}
 
@@ -234,7 +232,7 @@ func convert_m_document_source_url(wg *sync.WaitGroup) {
 
 		// write content to file
 		if _, err := group.File.WriteString(content); err != nil {
-			log.Printf("Error writing to file: %v", err)
+			log_boot.Tracef("Error writing to file: %v", err)
 		}
 
 		// assign group to files[tag]
@@ -254,7 +252,7 @@ func convert_m_document_metadata(wg *sync.WaitGroup) {
 	defer func(files Grouping) {
 		for _, group := range files {
 			if err := group.CloseAll(); err != nil {
-				log.Println(err)
+				log_boot.Trace(err)
 			}
 		}
 	}(files)
@@ -308,15 +306,14 @@ func convert_m_document_metadata(wg *sync.WaitGroup) {
 
 			// ensure that the data's directory exists for the batch bin of data
 			if err := os.MkdirAll(dirPath, os.ModePerm); err != nil {
-				log.Printf("error creating directory %v: %v", dirPath, err)
+				log_boot.Tracef("error creating directory %v: %v", dirPath, err)
 				return
 			}
 
 			// open the file for writing with append and create mode enabled
 			f, err := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 			if err != nil {
-				log.Println(fileName)
-				log.Printf("error opening file %v: %v", filePath, err)
+				log_boot.Tracef("fileName: %+v\nerror opening file %v: %v", fileName, filePath, err)
 				return
 			}
 
@@ -333,7 +330,7 @@ func convert_m_document_metadata(wg *sync.WaitGroup) {
 
 		// write content to file
 		if _, err := group.File.WriteString(content); err != nil {
-			log.Printf("Error writing to file: %v", err)
+			log_boot.Tracef("Error writing to file: %v", err)
 		}
 
 		// assign group to files[tag]
@@ -347,25 +344,25 @@ func convert_m_index_page_identifier() {
 	filePath := filepath.Join(*flag_s_persistent_database_file, "m_index_page_identifier.db")
 	file, err := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		log.Printf("error opening file %v: %v", filePath, err)
+		log_boot.Tracef("error opening file %v: %v", filePath, err)
 		return
 	}
 	defer func() {
 		err := file.Close()
 		if err != nil {
-			log.Println(err)
+			log_boot.Trace(err)
 			return
 		}
 	}()
 
 	if file == nil {
-		panic("file is nil")
+		log_boot.Fatal("file is nil")
 	}
 
 	for index, pageIdentifier := range m_index_page_identifier {
 		content := fmt.Sprintf("%d###%s\n", index, pageIdentifier)
 		if _, err := file.WriteString(content); err != nil {
-			log.Printf("Error writing to file: %v", err)
+			log_boot.Tracef("Error writing to file: %v", err)
 		}
 	}
 }
@@ -377,25 +374,25 @@ func convert_m_index_document_identifier() {
 	filePath := filepath.Join(*flag_s_persistent_database_file, "m_index_document_identifier.db")
 	file, err := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		log.Printf("error opening file %v: %v", filePath, err)
+		log_boot.Tracef("error opening file %v: %v", filePath, err)
 		return
 	}
 	defer func() {
 		err := file.Close()
 		if err != nil {
-			log.Println(err)
+			log_boot.Trace(err)
 			return
 		}
 	}()
 
 	if file == nil {
-		panic("file is nil")
+		log_boot.Fatal("file is nil")
 	}
 
 	for index, documentIdentifier := range m_index_document_identifier {
 		content := fmt.Sprintf("%d###%s\n", index, documentIdentifier)
 		if _, err := file.WriteString(content); err != nil {
-			log.Printf("Error writing to file: %v", err)
+			log_boot.Tracef("Error writing to file: %v", err)
 		}
 	}
 }
@@ -412,7 +409,7 @@ func convert_m_document_identifier_directory(wg *sync.WaitGroup) {
 	defer func(files Grouping) {
 		for _, group := range files {
 			if err := group.CloseAll(); err != nil {
-				log.Println(err)
+				log_boot.Trace(err)
 			}
 		}
 	}(files)
@@ -465,15 +462,14 @@ func convert_m_document_identifier_directory(wg *sync.WaitGroup) {
 
 			// ensure that the data's directory exists for the batch bin of data
 			if err := os.MkdirAll(dirPath, os.ModePerm); err != nil {
-				log.Printf("error creating directory %v: %v", dirPath, err)
+				log_boot.Tracef("error creating directory %v: %v", dirPath, err)
 				return
 			}
 
 			// open the file for writing with append and create mode enabled
 			f, err := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 			if err != nil {
-				log.Println(fileName)
-				log.Printf("error opening file %v: %v", filePath, err)
+				log_boot.Tracef("fileName: %+v\nerror opening file %v: %v", fileName, filePath, err)
 				return
 			}
 
@@ -486,7 +482,7 @@ func convert_m_document_identifier_directory(wg *sync.WaitGroup) {
 
 		// write content to file
 		if _, err := group.File.WriteString(content); err != nil {
-			log.Printf("Error writing to file: %v", err)
+			log_boot.Tracef("Error writing to file: %v", err)
 		}
 
 		// assign group to files[tag]
@@ -506,7 +502,7 @@ func convert_m_page_gematria_english(wg *sync.WaitGroup) {
 	defer func(files Grouping) {
 		for _, group := range files {
 			if err := group.CloseAll(); err != nil {
-				log.Println(err)
+				log_boot.Trace(err)
 			}
 		}
 	}(files)
@@ -552,15 +548,14 @@ func convert_m_page_gematria_english(wg *sync.WaitGroup) {
 
 			// ensure that the data's directory exists for the batch bin of data
 			if err := os.MkdirAll(dirPath, os.ModePerm); err != nil {
-				log.Printf("error creating directory %v: %v", dirPath, err)
+				log_boot.Tracef("error creating directory %v: %v", dirPath, err)
 				return
 			}
 
 			// open the file for writing with append and create mode enabled
 			f, err := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 			if err != nil {
-				log.Println(fileName)
-				log.Printf("error opening file %v: %v", filePath, err)
+				log_boot.Tracef("fileName: %+v\nerror opening file %v: %v", fileName, filePath, err)
 				return
 			}
 
@@ -585,7 +580,7 @@ func convert_m_page_gematria_english(wg *sync.WaitGroup) {
 
 		// write content to file
 		if _, err := group.File.WriteString(content); err != nil {
-			log.Printf("Error writing to file: %v", err)
+			log_boot.Tracef("Error writing to file: %v", err)
 		}
 
 		// assign group to files[tag]
@@ -605,7 +600,7 @@ func convert_m_page_gematria_jewish(wg *sync.WaitGroup) {
 	defer func(files Grouping) {
 		for _, group := range files {
 			if err := group.CloseAll(); err != nil {
-				log.Println(err)
+				log_boot.Trace(err)
 			}
 		}
 	}(files)
@@ -651,15 +646,14 @@ func convert_m_page_gematria_jewish(wg *sync.WaitGroup) {
 
 			// ensure that the data's directory exists for the batch bin of data
 			if err := os.MkdirAll(dirPath, os.ModePerm); err != nil {
-				log.Printf("error creating directory %v: %v", dirPath, err)
+				log_boot.Tracef("error creating directory %v: %v", dirPath, err)
 				return
 			}
 
 			// open the file for writing with append and create mode enabled
 			f, err := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 			if err != nil {
-				log.Println(fileName)
-				log.Printf("error opening file %v: %v", filePath, err)
+				log_boot.Tracef("fileName: %+v\nerror opening file %v: %v", fileName, filePath, err)
 				return
 			}
 
@@ -684,7 +678,7 @@ func convert_m_page_gematria_jewish(wg *sync.WaitGroup) {
 
 		// write content to file
 		if _, err := group.File.WriteString(content); err != nil {
-			log.Printf("Error writing to file: %v", err)
+			log_boot.Tracef("Error writing to file: %v", err)
 		}
 
 		// assign group to files[tag]
@@ -704,7 +698,7 @@ func convert_m_page_gematria_simple(wg *sync.WaitGroup) {
 	defer func(files Grouping) {
 		for _, group := range files {
 			if err := group.CloseAll(); err != nil {
-				log.Println(err)
+				log_boot.Trace(err)
 			}
 		}
 	}(files)
@@ -750,15 +744,14 @@ func convert_m_page_gematria_simple(wg *sync.WaitGroup) {
 
 			// ensure that the data's directory exists for the batch bin of data
 			if err := os.MkdirAll(dirPath, os.ModePerm); err != nil {
-				log.Printf("error creating directory %v: %v", dirPath, err)
+				log_boot.Tracef("error creating directory %v: %v", dirPath, err)
 				return
 			}
 
 			// open the file for writing with append and create mode enabled
 			f, err := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 			if err != nil {
-				log.Println(fileName)
-				log.Printf("error opening file %v: %v", filePath, err)
+				log_boot.Tracef("fileName: %+v\nerror opening file %v: %v", fileName, filePath, err)
 				return
 			}
 
@@ -783,7 +776,7 @@ func convert_m_page_gematria_simple(wg *sync.WaitGroup) {
 
 		// write content to file
 		if _, err := group.File.WriteString(content); err != nil {
-			log.Printf("Error writing to file: %v", err)
+			log_boot.Tracef("Error writing to file: %v", err)
 		}
 
 		// assign group to files[tag]
@@ -800,7 +793,7 @@ func convert_m_location_cities() {
 		for _, file := range files {
 			err := file.Close()
 			if err != nil {
-				log.Println(err)
+				log_boot.Trace(err)
 				return
 			}
 		}
@@ -813,8 +806,7 @@ func convert_m_location_cities() {
 			filePath := filepath.Join(*flag_s_persistent_database_file, fileName)
 			file, err := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 			if err != nil {
-				log.Println(fileName)
-				log.Printf("error opening file %v: %v", filePath, err)
+				log_boot.Tracef("fileName: %+v\nerror opening file %v: %v", fileName, filePath, err)
 				return
 			}
 			files[firstChar] = file
@@ -832,7 +824,7 @@ func convert_m_location_cities() {
 			panic("file is nil")
 		}
 		if _, err := file.WriteString(content); err != nil {
-			log.Printf("Error writing to file: %v", err)
+			log_boot.Tracef("Error writing to file: %v", err)
 		}
 	}
 }
@@ -846,7 +838,7 @@ func convert_m_location_states() {
 		for _, file := range files {
 			err := file.Close()
 			if err != nil {
-				log.Println(err)
+				log_boot.Trace(err)
 				return
 			}
 		}
@@ -859,8 +851,7 @@ func convert_m_location_states() {
 			filePath := filepath.Join(*flag_s_persistent_database_file, fileName)
 			file, err := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 			if err != nil {
-				log.Println(fileName)
-				log.Printf("error opening file %v: %v", filePath, err)
+				log_boot.Tracef("fileName: %+v\nerror opening file %v: %v", fileName, filePath, err)
 				return
 			}
 			files[firstChar] = file
@@ -877,7 +868,7 @@ func convert_m_location_states() {
 			panic("file is nil")
 		}
 		if _, err := file.WriteString(content); err != nil {
-			log.Printf("Error writing to file: %v", err)
+			log_boot.Tracef("Error writing to file: %v", err)
 		}
 	}
 }
@@ -891,7 +882,7 @@ func convert_m_location_countries() {
 		for _, file := range files {
 			err := file.Close()
 			if err != nil {
-				log.Println(err)
+				log_boot.Trace(err)
 				return
 			}
 		}
@@ -904,8 +895,7 @@ func convert_m_location_countries() {
 			filePath := filepath.Join(*flag_s_persistent_database_file, fileName)
 			file, err := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 			if err != nil {
-				log.Println(fileName)
-				log.Printf("error opening file %v: %v", filePath, err)
+				log_boot.Tracef("fileName: %+v\nerror opening file %v: %v", fileName, filePath, err)
 				return
 			}
 			files[firstChar] = file
@@ -921,7 +911,7 @@ func convert_m_location_countries() {
 			panic("file is nil")
 		}
 		if _, err := file.WriteString(content); err != nil {
-			log.Printf("Error writing to file: %v", err)
+			log_boot.Tracef("Error writing to file: %v", err)
 		}
 	}
 }
@@ -1019,6 +1009,7 @@ func convert_m_document_page_number_page() {
 		}
 	}
 }
+
 func convert_m_document_identifier_cover_page_identifier() {
 	mu_document_identifier_cover_page_identifier.RLock()
 	defer mu_document_identifier_cover_page_identifier.RUnlock()

@@ -1,21 +1,21 @@
 package main
 
 import (
-	`bufio`
-	`encoding/json`
-	`errors`
-	`fmt`
-	`io/fs`
-	`log`
-	`log/slog`
-	`os`
-	`path/filepath`
-	`strings`
-	`sync`
-	`sync/atomic`
-	`time`
+	"bufio"
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io/fs"
+	"log"
+	"os"
+	"path/filepath"
+	"strings"
+	"sync"
+	"sync/atomic"
+	"time"
 
-	go_smartchan `github.com/andreimerlescu/go-smartchan`
+	go_smartchan "github.com/andreimerlescu/go-smartchan"
 )
 
 var (
@@ -28,7 +28,7 @@ var (
 func database_load() error {
 	directory := *flag_s_database
 	if len(directory) == 0 {
-		return fmt.Errorf("failed to load database %v", directory)
+		return log_boot.TraceReturnf("failed to load database %v", directory)
 	}
 
 	wg_active_tasks.Add(1)
@@ -40,7 +40,7 @@ func database_load() error {
 			return symlink_err
 		}
 		directory = resolvedPath
-		log.Printf("database_load => assigned directory = %v", directory)
+		log_boot.Printf("database_load => assigned directory = %v", directory)
 	}
 
 	walkPath := filepath.Join(directory, ".")
@@ -48,24 +48,26 @@ func database_load() error {
 		walkPath = filepath.Join(".", walkPath)
 	}
 
+	log_boot.Printf("walkPath = %+v", walkPath)
+
 	err := filepath.WalkDir(walkPath, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
 
 		if d.IsDir() {
-			if strings.HasSuffix(path, string(filepath.Separator)+"pages") {
+			if strings.HasSuffix(path, string(filepath.Separator)+"pages") || strings.EqualFold(path, directory) {
 				return nil
 			}
 			timeout := time.NewTicker(30 * time.Second)
 
 			if f_b_path_is_symlink(path) {
-				log.Printf("path %v is a symlink ", path)
+				log_boot.Printf("path %v is a symlink ", path)
 				var err error
 				var new_path string
 				new_path, err = resolve_symlink(path)
 				if err != nil {
-					log.Printf("failed to resolve symblink %v with err %v", path, err)
+					log_boot.Tracef("failed to resolve symblink %v with err %v", path, err)
 					return nil
 				}
 				path = new_path
@@ -74,12 +76,12 @@ func database_load() error {
 			document_record_filename := filepath.Join(path, "record.json")
 			document_record_info, info_err := os.Stat(document_record_filename)
 			if info_err != nil {
-				log.Printf("failed to find record.json inside the path %v therefore we are skipping", path)
+				log_boot.Tracef("failed to find record.json inside the path %v therefore we are skipping", path)
 				return nil
 			}
 
 			if document_record_info.Size() == 0 {
-				log.Printf("the document_record_info.Size() == 0 for path %v", path)
+				log_boot.Tracef("the document_record_info.Size() == 0 for path %v", path)
 				return nil
 			}
 
@@ -89,9 +91,11 @@ func database_load() error {
 					if ch_db_directories.CanWrite() {
 						err := ch_db_directories.Write(path)
 						if err != nil {
-							return err
+							return log_boot.TraceReturn(err)
 						}
 						return nil
+					} else {
+						return log_boot.TraceReturn(errors.New("cant write to closed ch_db_directories channel"))
 					}
 				case <-timeout.C:
 					return nil
@@ -103,7 +107,7 @@ func database_load() error {
 		return nil
 	})
 	if err != nil {
-		log.Printf("failed to walk directory %v due to error %v", directory, err)
+		log_boot.Tracef("failed to walk directory %v due to error %v", directory, err)
 		return err
 	}
 	return nil
@@ -126,9 +130,11 @@ func resolve_symlink(path string) (string, error) {
 	return path, nil
 }
 
-func process_directories(sch *go_smartchan.SmartChan) {
+func process_directories(ctx context.Context, sch *go_smartchan.SmartChan) {
 	for {
 		select {
+		case <-ctx.Done():
+			return
 		case i_data, ok := <-sch.Chan():
 			if ok {
 				path, valid := i_data.(string)
@@ -136,15 +142,15 @@ func process_directories(sch *go_smartchan.SmartChan) {
 					requestedAt := time.Now().UTC()
 					sem_db_directories.Acquire()
 					if since := time.Since(requestedAt).Seconds(); since >= 1.0 {
-						log.Printf("took %.0f seconds to acquire sem_db_directories queue position", since)
+						log_boot.Printf("took %.0f seconds to acquire sem_db_directories queue position", since)
 					}
 					wg_active_tasks.Add(1)
 					go analyze_document_directory(path)
 				} else {
-					log.Printf("failed to typecast i_data %T into string", i_data)
+					log_debug.Tracef("failed to typecast i_data %T into string", i_data)
 				}
 			} else {
-				slog.Warn("channel is closed")
+				log_error.Trace("channel is closed")
 			}
 		}
 	}
@@ -164,20 +170,20 @@ func analyze_document_directory(path string) {
 
 	bytes_json_record, record_json_err := os.ReadFile(filepath.Join(path, "record.json"))
 	if record_json_err != nil {
-		log.Printf("failed to read the file record.json due to %v from path = %v/record.json", record_json_err, path)
+		log_boot.Tracef("failed to read the file record.json due to %v from path = %v/record.json", record_json_err, path)
 		return
 	}
 
 	var record ResultData
 	json_err := json.Unmarshal(bytes_json_record, &record)
 	if json_err != nil {
-		log.Printf("failed to parse the json for %v/record.json due to %v", path, json_err)
+		log_boot.Tracef("failed to parse the json for %v/record.json due to %v", path, json_err)
 		return
 	}
 
 	if len(record.Identifier) == 0 {
-		log.Printf("skipping over path %v due to record.Identifier being 0 bytes", path)
-		log.Printf("-> skipped record = %v", record)
+		log_error.Printf("skipping over path %v due to record.Identifier being 0 bytes", path)
+		log_error.Printf("-> skipped record = %v", record)
 		return
 	}
 
@@ -395,11 +401,12 @@ func analyze_page(record_identifier string, path string, i uint) {
 
 func dump_database_to_disk() {
 	if !*flag_b_persist_runtime_database {
-		log.Printf("skipping dump_database_to_disk because config.yaml persist-runtime-database is set to false [the default]")
+		log_boot.Printf("skipping dump_database_to_disk because config.yaml persist-runtime-database is set to false [the default]")
 		return
 	}
 	err := os.MkdirAll(*flag_s_persistent_database_file, 0755)
 	if err != nil {
+		log_boot.Trace(err)
 		return
 	}
 
@@ -435,13 +442,13 @@ func dump_database_to_disk() {
 	//go write_payload_to_file("m_location_countries.json", &wg, &mu_location_countries, &m_location_countries)
 	//go write_payload_to_file("m_location_states.json", &wg, &mu_location_states, &m_location_states)
 	wg.Wait()
-	log.Println("finished writing database to disk")
+	log_boot.Println("finished writing database to disk")
 
 }
 
 func restore_database_from_disk() {
 	if !can_restore_database_from_disk() {
-		log.Printf("cannot restore_database_from_disk due to failed santity check")
+		log_boot.Trace("cannot restore_database_from_disk due to failed santity check")
 		return
 	}
 	wg := sync.WaitGroup{}
@@ -487,26 +494,26 @@ func f_clear_db_restore_file() {
 	file := filepath.Join(".", *flag_s_flush_db_cache_watch_file)
 	flush_cache_file_info, flush_cache_file_err := os.Stat(file)
 	if flush_cache_file_err != nil {
-		log.Printf("cannot remove the %v because it does not exist [%v]", file, flush_cache_file_err)
+		log_boot.Tracef("cannot remove the %v because it does not exist [%v]", file, flush_cache_file_err)
 		return // file not present
 	}
 	mode := flush_cache_file_info.Mode()
 	if mode.IsDir() {
-		log.Printf("PROBLEM: the %v file is a directory when the program expected it to be an empty text file [%d bytes]\n", file, flush_cache_file_info.Size())
+		log_boot.Tracef("PROBLEM: the %v file is a directory when the program expected it to be an empty text file [%d bytes]\n", file, flush_cache_file_info.Size())
 		return
 	} else if (mode & os.ModeSymlink) != 0 {
-		log.Printf("PROBLEM: the %v file is a symlink when the program expected it to be an empty text file [%d bytes]\n", file, flush_cache_file_info.Size())
+		log_boot.Tracef("PROBLEM: the %v file is a symlink when the program expected it to be an empty text file [%d bytes]\n", file, flush_cache_file_info.Size())
 		return
 	} else if (mode & os.ModeType) == 0 {
-		log.Printf("found a regular file %v and will flush the database cache because this file is present then we'll delete this file after", file)
+		log_boot.Printf("found a regular file %v and will flush the database cache because this file is present then we'll delete this file after", file)
 		rm_rf_err := os.RemoveAll(filepath.Join(*flag_s_persistent_database_file, "*.json"))
 		if rm_rf_err != nil {
-			log.Printf("error removing the *.json files from %v/* due to err %v", *flag_s_persistent_database_file, rm_rf_err)
+			log_boot.Tracef("error removing the *.json files from %v/* due to err %v", *flag_s_persistent_database_file, rm_rf_err)
 			return
 		}
 		err := os.Remove(file)
 		if err != nil {
-			log.Printf("failed to remove the %v due to err %v", file, err)
+			log_boot.Tracef("failed to remove the %v due to err %v", file, err)
 			return
 		}
 	}
@@ -520,13 +527,13 @@ func f_b_db_flush_file_set() bool {
 	}
 	mode := flush_cache_file_info.Mode()
 	if mode.IsDir() {
-		log.Printf("PROBLEM: the %v file is a directory when the program expected it to be an empty text file [%d bytes]\n", file, flush_cache_file_info.Size())
+		log_boot.Tracef("PROBLEM: the %v file is a directory when the program expected it to be an empty text file [%d bytes]\n", file, flush_cache_file_info.Size())
 		return false
 	} else if (mode & os.ModeSymlink) != 0 {
-		log.Printf("PROBLEM: the %v file is a symlink when the program expected it to be an empty text file [%d bytes]\n", file, flush_cache_file_info.Size())
+		log_boot.Tracef("PROBLEM: the %v file is a symlink when the program expected it to be an empty text file [%d bytes]\n", file, flush_cache_file_info.Size())
 		return false
 	} else if (mode & os.ModeType) == 0 {
-		log.Printf("found a regular file %v and will flush the database cache because this file is present then we'll delete this file after", file)
+		log_boot.Tracef("found a regular file %v and will flush the database cache because this file is present then we'll delete this file after", file)
 		return true
 	}
 
@@ -584,12 +591,12 @@ func can_restore_database_from_disk() bool {
 func f_b_path_exists(path string) bool {
 	info, info_err := os.Stat(path)
 	if errors.Is(info_err, os.ErrNotExist) || errors.Is(info_err, os.ErrPermission) {
-		log.Printf("skipping %v due to err %v", path, info_err)
+		log_boot.Tracef("skipping %v due to err %v", path, info_err)
 		return false
 	}
 
 	if info.Size() == 0 {
-		log.Printf("skipping %v due to size = 0 bytes", path)
+		log_boot.Tracef("skipping %v due to size = 0 bytes", path)
 		return false
 	}
 	return true
@@ -601,24 +608,24 @@ func load_file_into_payload(filename string, wg *sync.WaitGroup, mu *sync.RWMute
 
 	path := filepath.Join(*flag_s_persistent_database_file, filename)
 	if !f_b_path_exists(path) {
-		log.Printf("skipping %v due to size = 0 bytes", path)
+		log_boot.Tracef("skipping %v due to size = 0 bytes", path)
 		return
 	}
 
 	bytes, bytes_err := os.ReadFile(path)
 	if bytes_err != nil {
-		log.Printf("failed to read file %v due to err %v", path, bytes_err)
+		log_boot.Tracef("failed to read file %v due to err %v", path, bytes_err)
 		return
 	}
 	mu.Lock()
 	err := json.Unmarshal(bytes, &payload)
 	mu.Unlock()
 	if err != nil {
-		log.Printf("failed to unmarshal bytes for %v due to err %v", filename, err)
+		log_boot.Tracef("failed to unmarshal bytes for %v due to err %v", filename, err)
 		return
 	}
 
-	log.Printf("completed loading file %v into the payload\n", filename)
+	log_boot.Printf("completed loading file %v into the payload\n", filename)
 }
 
 func write_to_file(filename string, payload any) error {
@@ -685,6 +692,7 @@ func write_payload_to_file(filename string, wg *sync.WaitGroup, mu *sync.RWMutex
 	defer mu.Unlock()
 	err := write_any_to_file(*flag_s_persistent_database_file, filename, payload)
 	if err != nil {
+		log_boot.Tracef("write_payload_to_file err: %+v", err)
 		return
 	}
 }

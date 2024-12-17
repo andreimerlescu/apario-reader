@@ -18,32 +18,44 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 package main
 
 import (
-	`context`
-	`crypto/tls`
-	`html/template`
+	"context"
+	"crypto/tls"
+	"html/template"
 	"image/color"
-	`net`
-	`regexp`
-	`sync`
+	"net"
+	"os"
+	"regexp"
+	"sync"
 	"sync/atomic"
 	"time"
 
-	ai `github.com/andreimerlescu/go-apario-identifier`
-	cwg `github.com/andreimerlescu/go-countable-waitgroup`
-	sema `github.com/andreimerlescu/go-sema`
-	sch `github.com/andreimerlescu/go-smartchan`
-	`github.com/gin-gonic/gin`
-	`github.com/gorilla/sessions`
+	ai "github.com/andreimerlescu/go-apario-identifier"
+	cwg "github.com/andreimerlescu/go-countable-waitgroup"
+	sema "github.com/andreimerlescu/go-sema"
+	sch "github.com/andreimerlescu/go-smartchan"
+	"github.com/gin-gonic/gin"
+	"github.com/gorilla/sessions"
 )
 
 const (
 	c_retry_attempts     = 33
 	c_identifier_charset = "ABCDEFGHKMNPQRSTUVWXYZ123456789"
 	c_dir_permissions    = 0111
+
+	cLogInfo  = "info"
+	cLogDebug = "debug"
+	cLogError = "error"
+	cLogBoot  = "boot"
 )
 
 var (
 	startedAt = time.Now().UTC()
+
+	log_info  *CustomLogger
+	log_debug *CustomLogger
+	log_error *CustomLogger
+	log_boot  *CustomLogger
+	log_files map[string]*os.File
 
 	valet_db_data     = ai.NewValet(*flag_s_database)
 	valet_db_users    = ai.NewValet(*flag_s_users_database_directory)

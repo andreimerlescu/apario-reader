@@ -1,20 +1,20 @@
 package main
 
 import (
-	`bufio`
-	`context`
-	`embed`
-	`encoding/csv`
-	`encoding/json`
-	`fmt`
-	`io/fs`
-	`log`
-	`log/slog`
-	`strings`
-	`sync`
-	`sync/atomic`
+	"bufio"
+	"context"
+	"embed"
+	"encoding/csv"
+	"encoding/json"
+	"fmt"
+	"io/fs"
+	"log"
+	"log/slog"
+	"strings"
+	"sync"
+	"sync/atomic"
 
-	go_gematria `github.com/andreimerlescu/go-gematria`
+	go_gematria "github.com/andreimerlescu/go-gematria"
 )
 
 //go:embed bundled/*
@@ -26,19 +26,17 @@ func bundled_load_cryptonyms() {
 	a_b_cryptonyms_loaded.Store(false)
 	cryptonymFile, cryptonymFileErr := bundled_files.ReadFile("bundled/intelligence/cryptonyms.json")
 	if cryptonymFileErr != nil {
-		log.Printf("failed to parse cryptonyms.json file from the data directory due to error: %v", cryptonymFileErr)
+		log_boot.Tracef("failed to parse cryptonyms.json file from the data directory due to error: %v", cryptonymFileErr)
 	} else {
 		cryptonymMarshalErr := json.Unmarshal(cryptonymFile, &m_cryptonyms)
 		if cryptonymMarshalErr != nil {
-			log.Printf("failed to load the m_cryptonyms due to error %v", cryptonymMarshalErr)
+			log_boot.Tracef("failed to load the m_cryptonyms due to error %v", cryptonymMarshalErr)
 		}
-		out := ""
-		var cryptonyms []string
-		for cryptonym, _ := range m_cryptonyms {
-			cryptonyms = append(cryptonyms, cryptonym)
+		var out strings.Builder
+		for crypt, desc := range m_cryptonyms {
+			out.WriteString(fmt.Sprintf("   - %s = %s\n", crypt, desc))
 		}
-		out = strings.Join(cryptonyms, ",")
-		log.Printf("Cryptonyms to search for: %v", out)
+		log_info.Printf("Cryptonyms to search for: \n%v", out.String())
 	}
 	a_b_cryptonyms_loaded.Store(true)
 }
@@ -95,7 +93,7 @@ func bundled_load_all_words() {
 			defer wg.Done()
 			err := bundled_load_language(language)
 			if err != nil {
-				slog.Error("received an error loading %v: %v", language, err)
+				log_boot.Tracef("received an error loading %v: %v", language, err)
 			}
 		}(&wg, language)
 	}
