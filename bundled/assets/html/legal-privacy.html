@@ -6,19 +6,34 @@
 </head>
 <body>
 <main>
-    <div class="px-4 py-3 my-4">
+    <div class="px-1 py-1 my-1">
         <div class="text-center">
-            {{ render_partial "header_full" .dark_mode }}
+            {{ render_partial "header_full_small" .dark_mode }}
         </div>
         <div class="col-lg-6 mx-auto text-center">
             <p class="lead mb-4">Legal / Privacy Policy</p>
             <div class="d-grid gap-2 d-sm-flex justify-content-sm-center">
                 <ul>
-                    <li>No data is collected on you.</li>
+                    <li>No data is collected on you*.</li>
                     <li>Cookies are used to allow you to set dark mode.</li>
-                    <li>There are no advertisers, affiliates, or marketing associations to {{ .company }}.</li>
-                    <li>No analytics are collected.</li>
+                    <li>
+                        {{.company}} is not running a custom version of the runtime.
+                        The source code is open source on <a href="https://github.com/ProjectApario/reader" title="Project Apario Reader on GitHub">ProjectAparo/reader</a>.
+                    </li>
+                    <li>{{.company}} may opt for using the $APARIO token on XRP in the future by continuing to use this branch of the runtime.</li>
+                    <li>
+                        {{ .company }} supports this instance using
+                        <a href="https://americascomeback.info" title="America's Comeback Forums" target="_blank">
+                            America's Comeback Forums
+                        </a> for paid technical support and
+                        <a href="https://ravensquad.army" title="Raven Squad Army Digital Publication" target="_blank">
+                            Raven Squad Army
+                        </a> for news and information about updates to the software.
+                    </li>
+                    <li>No analytics are collected **.</li>
                 </ul>
+                <small>* The software includes IP banning techniques that will store IP addresses of malicious activity to protect the runtime from harm</small><br>
+                <small>** The hit counter is tied to IP addresses but does not expose any endpoints to the internal memory of the runtime</small>
             </div>
         </div>
         {{ render_partial "footer" .dark_mode }}

@@ -6,12 +6,12 @@
 </head>
 <body>
 <main>
-    <div class="px-4 py-3 my-4">
+    <div class="px-1 py-1 my-1">
         <div class="text-center">
-            {{ render_partial "header_full" .dark_mode }}
+            {{ render_partial "header_full_small" .dark_mode }}
         </div>
         {{ $outer := . }}
-        <div class="container">
+        <div class="container px-2 py-2 my-2">
             <div class="text-center">
                 <div class="btn-group mb-4" role="group" aria-label="Pagination">
                     <a href="?page=1&limit={{ .i_limit }}" class="btn btn-outline-primary {{ if eq .i_page 1 }}disabled{{ end }}">First</a>
