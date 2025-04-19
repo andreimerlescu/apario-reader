@@ -1,15 +1,15 @@
 package main
 
 import (
-	`fmt`
-	`html/template`
-	`log`
-	`net/http`
-	`strconv`
-	`strings`
+	"fmt"
+	"html/template"
+	"log"
+	"net/http"
+	"strconv"
+	"strings"
 
-	go_gematria `github.com/andreimerlescu/go-gematria`
-	`github.com/gin-gonic/gin`
+	go_gematria "github.com/andreimerlescu/go-gematria"
+	"github.com/gin-gonic/gin"
 )
 
 func r_get_gematria(c *gin.Context) {
@@ -56,9 +56,13 @@ func r_get_gematria(c *gin.Context) {
 			c.String(http.StatusInternalServerError, "Failed to load missing missing-page.html")
 			return
 		}
+		mu_gin_func_map.RLock()
 		tmpl = template.Must(template.New("view-gematria").Funcs(gin_func_map).Parse(string(missing_data)))
+		mu_gin_func_map.RUnlock()
 	} else {
+		mu_gin_func_map.RLock()
 		tmpl = template.Must(template.New("view-gematria").Funcs(gin_func_map).Parse(string(data)))
+		mu_gin_func_map.RUnlock()
 	}
 
 	type result struct {

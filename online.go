@@ -1,9 +1,8 @@
 package main
 
 import (
-	`context`
-	`log`
-	`time`
+	"context"
+	"time"
 )
 
 func clean_online_counter_scheduler(ctx context.Context) {
@@ -15,7 +14,7 @@ func clean_online_counter_scheduler(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			cutoff := time.Duration(*flag_i_online_refresh_delay_minutes) * time.Minute // match configuration language
+			//cutoff := time.Duration(*flag_i_online_refresh_delay_minutes) * time.Minute // match configuration language
 			mu_online_list.RLock()
 			entries := m_online_list
 			mu_online_list.RUnlock()
@@ -25,8 +24,8 @@ func clean_online_counter_scheduler(ctx context.Context) {
 					mu_online_list.Lock()
 					delete(m_online_list, entry.IP.String())
 					mu_online_list.Unlock()
-				} else {
-					log.Printf("%s %s %s %v", "entry.LastAction", entry.LastAction, " is less than cutoff ", cutoff)
+					//} else {
+					//	log.Printf("%s %s %s %v", "entry.LastAction", entry.LastAction, " is less than cutoff ", cutoff)
 				}
 			}
 		}

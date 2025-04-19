@@ -1,22 +1,22 @@
 package main
 
 import (
-	`bytes`
-	`encoding/json`
-	`errors`
-	`fmt`
-	`html/template`
-	`log`
-	`net/http`
-	`os`
-	`path/filepath`
-	`regexp`
-	`strings`
-	`time`
+	"bytes"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"html/template"
+	"log"
+	"net/http"
+	"os"
+	"path/filepath"
+	"regexp"
+	"strings"
+	"time"
 
-	go_editorjs `github.com/andreimerlescu/go-editorjs`
-	go_gematria `github.com/andreimerlescu/go-gematria`
-	`github.com/gin-gonic/gin`
+	go_editorjs "github.com/andreimerlescu/go-editorjs"
+	go_gematria "github.com/andreimerlescu/go-gematria"
+	"github.com/gin-gonic/gin"
 )
 
 func r_get_page(c *gin.Context) {
@@ -113,12 +113,24 @@ func r_get_page(c *gin.Context) {
 		return
 	}
 
-	document_pdf_path := filepath.Join(directory, document_directory_name, fmt.Sprintf("%v.pdf", template_vars["meta_record_number"]))
-	document_pdf_path = strings.ReplaceAll(document_pdf_path, filepath.Join(*flag_s_database, *flag_s_database), *flag_s_database)
-	document_pdf_info, document_pdf_info_err := os.Stat(document_pdf_path)
-	if errors.Is(document_pdf_info_err, os.ErrNotExist) || errors.Is(document_pdf_info_err, os.ErrPermission) || document_pdf_info_err != nil {
-		log.Printf("failed to get the info about the document %v pdf path %v due to err %v", document_identifier, document_pdf_path, document_pdf_info_err)
-		c.String(http.StatusInternalServerError, "error executing template")
+	record_bytes, record_err := os.ReadFile(filepath.Join(directory, document_directory_name, "record.json"))
+	if record_err != nil {
+		log.Printf("failed to read the record_path %v due to error %v", ocr_path, record_err)
+		c.String(http.StatusInternalServerError, "error executing template", ocr_err)
+		return
+	}
+	var record ResultData
+	jsonErr := json.Unmarshal(record_bytes, &record)
+	if jsonErr != nil {
+		log.Printf("failed to parse the record_path %v due to error %v", ocr_path, jsonErr)
+		c.String(http.StatusInternalServerError, "error executing template", ocr_err)
+		return
+	}
+	document_pdf_path := record.PDFPath
+	document_pdf_info, info_err := os.Stat(document_pdf_path)
+	if info_err != nil {
+		log.Printf("failed to stat document pdf path %v due to error %v", document_pdf_path, info_err)
+		c.String(http.StatusInternalServerError, "error executing template", ocr_err)
 		return
 	}
 
@@ -127,20 +139,19 @@ func r_get_page(c *gin.Context) {
 	page_pdf_info, page_pdf_info_err := os.Stat(page_pdf_path)
 	if errors.Is(page_pdf_info_err, os.ErrNotExist) || errors.Is(page_pdf_info_err, os.ErrPermission) || page_pdf_info_err != nil {
 		log.Printf("failed to get the info about the page %v pdf path %v due to err %v", page_identifier, page_pdf_path, page_pdf_info_err)
-		c.String(http.StatusInternalServerError, "error executing template")
-		return
 	}
-
-	template_vars["document_pdf_bytes"] = document_pdf_info.Size()
-	template_vars["page_pdf_bytes"] = page_pdf_info.Size()
+	if document_pdf_info != nil {
+		template_vars["document_pdf_bytes"] = document_pdf_info.Size()
+	}
+	if page_pdf_info != nil {
+		template_vars["page_pdf_bytes"] = page_pdf_info.Size()
+	}
 
 	page_data_path := filepath.Join(directory, document_directory_name, "pages", fmt.Sprintf("page.%06d.json", page_number))
 	page_data_path = strings.ReplaceAll(page_data_path, filepath.Join(*flag_s_database, *flag_s_database), *flag_s_database)
 	page_data_bytes, page_data_err := os.ReadFile(page_data_path)
 	if page_data_err != nil {
 		log.Printf("failed to read the pages JSON data due to error %v", page_data_err)
-		c.String(http.StatusInternalServerError, "error executing template", page_data_err)
-		return
 	}
 
 	var page_data PendingPage
@@ -180,7 +191,9 @@ func r_get_page(c *gin.Context) {
 
 	template_vars["page_loading_svg_img_src"] = template.HTML(svg_page_loading_img_src)
 
+	mu_gin_func_map.RLock()
 	tmpl := template.Must(template.New("view-page").Funcs(gin_func_map).Parse(string(data)))
+	mu_gin_func_map.RUnlock()
 
 	var htmlBuilder strings.Builder
 	if err := tmpl.Execute(&htmlBuilder, template_vars); err != nil {

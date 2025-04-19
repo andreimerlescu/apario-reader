@@ -1,16 +1,16 @@
 package main
 
 import (
-	`fmt`
-	`html/template`
-	`log`
-	`net`
-	`net/http`
-	`os`
-	`strconv`
-	`strings`
+	"fmt"
+	"html/template"
+	"log"
+	"net"
+	"net/http"
+	"os"
+	"strconv"
+	"strings"
 
-	`github.com/gin-gonic/gin`
+	"github.com/gin-gonic/gin"
 )
 
 func r_render_static(path string, c *gin.Context) (string, error) {
@@ -20,7 +20,9 @@ func r_render_static(path string, c *gin.Context) (string, error) {
 		return "", fmt.Errorf("failed to load %v due to %v", path, err)
 	}
 
+	mu_gin_func_map.RLock()
 	tmpl := template.Must(template.New(path).Funcs(gin_func_map).Parse(string(data)))
+	mu_gin_func_map.RUnlock()
 
 	if a_i_total_documents.Load() == 0 {
 		a_i_total_documents.Store(int64(len(m_document_total_pages)))

@@ -1,20 +1,20 @@
 package main
 
 import (
-	`bytes`
-	`fmt`
-	`html/template`
-	`log`
-	`net/http`
-	`os`
-	`path/filepath`
-	`sort`
-	`strconv`
-	`strings`
-	`sync/atomic`
-	`time`
+	"bytes"
+	"fmt"
+	"html/template"
+	"log"
+	"net/http"
+	"os"
+	"path/filepath"
+	"sort"
+	"strconv"
+	"strings"
+	"sync/atomic"
+	"time"
 
-	`github.com/gin-gonic/gin`
+	"github.com/gin-gonic/gin"
 )
 
 func r_get_documents(c *gin.Context) {
@@ -67,7 +67,9 @@ func r_get_documents(c *gin.Context) {
 		return
 	}
 
+	mu_gin_func_map.RLock()
 	tmpl := template.Must(template.New("all-documents").Funcs(gin_func_map).Parse(string(data)))
+	mu_gin_func_map.RUnlock()
 
 	var htmlBuilder strings.Builder
 	if err := tmpl.Execute(&htmlBuilder, gin.H{
@@ -105,7 +107,9 @@ func r_get_view_document(c *gin.Context) {
 	document_identifier := c.Param("identifier")
 	document_identifier = reg_identifier.ReplaceAllString(document_identifier, "") // sanitize input
 
+	mu_gin_func_map.RLock()
 	tmpl := template.Must(template.New("view-document").Funcs(gin_func_map).Parse(string(data)))
+	mu_gin_func_map.RUnlock()
 
 	var template_vars gin.H
 	template_vars = gin.H{

@@ -1,22 +1,22 @@
 package main
 
 import (
-	`context`
-	`encoding/json`
-	`fmt`
-	`html/template`
-	`log`
-	`net/http`
-	`strconv`
-	`strings`
-	`sync`
-	`sync/atomic`
-	`time`
+	"context"
+	"encoding/json"
+	"fmt"
+	"html/template"
+	"log"
+	"net/http"
+	"strconv"
+	"strings"
+	"sync"
+	"sync/atomic"
+	"time"
 
-	go_gematria `github.com/andreimerlescu/go-gematria`
-	sema `github.com/andreimerlescu/go-sema`
-	go_smartchan `github.com/andreimerlescu/go-smartchan`
-	`github.com/gin-gonic/gin`
+	go_gematria "github.com/andreimerlescu/go-gematria"
+	sema "github.com/andreimerlescu/go-sema"
+	go_smartchan "github.com/andreimerlescu/go-smartchan"
+	"github.com/gin-gonic/gin"
 )
 
 func r_get_search(c *gin.Context) {
@@ -155,7 +155,9 @@ func deliver_search_results(c *gin.Context, query string, analysis SearchAnalysi
 		return
 	}
 
+	mu_gin_func_map.RLock()
 	tmpl := template.Must(template.New("search-results").Funcs(gin_func_map).Parse(string(data)))
+	mu_gin_func_map.RUnlock()
 
 	mode := gin_is_dark_mode(c)
 

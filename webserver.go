@@ -3,12 +3,12 @@ package main
 import (
 	"context"
 	"crypto/tls"
-	`errors`
+	"errors"
 	"html/template"
-	`io`
+	"io"
 	"log"
 	"net/http"
-	`os`
+	"os"
 	"strconv"
 	"time"
 
@@ -29,6 +29,7 @@ func NewWebServer(ctx context.Context) {
 			}
 		}()
 
+		mu_gin_func_map.Lock()
 		gin_func_map = template.FuncMap{
 			"render_partial":        render_partial_template,
 			"render_document_card":  render_document_card,
@@ -49,6 +50,8 @@ func NewWebServer(ctx context.Context) {
 			"hits":                  f_i_hits,
 			"get_pg_id_from_doc_id_def_id_and_cur_pg_num": f_s_get_page_identifier_from_document_identifier_default_identifier_and_current_page_number,
 		}
+		mu_gin_func_map.Unlock()
+		mu_gin_func_vars.Lock()
 		default_gin_func_vars = gin.H{
 			"company": *flag_s_site_company,
 			"domain":  *flag_s_primary_domain,
@@ -59,6 +62,7 @@ func NewWebServer(ctx context.Context) {
 			"foot":   default_gin_func_vars,
 			"footer": default_gin_func_vars,
 		}
+		mu_gin_func_vars.Unlock()
 
 		// Rate Limiting
 		var routeRateLimiter *limiter.Limiter

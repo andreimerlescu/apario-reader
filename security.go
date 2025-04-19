@@ -1,19 +1,19 @@
 package main
 
 import (
-	`context`
-	`crypto/sha256`
-	`encoding/hex`
-	`encoding/json`
-	`log`
-	`net`
-	`os`
-	`strings`
-	`sync`
-	`sync/atomic`
-	`time`
+	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
+	"log"
+	"net"
+	"os"
+	"strings"
+	"sync"
+	"sync/atomic"
+	"time"
 
-	`github.com/gin-gonic/gin`
+	"github.com/gin-gonic/gin"
 )
 
 func f_patch_server_with_banned_ip(ip net.IP) {
@@ -98,6 +98,12 @@ func f_s_filtered_ip(c *gin.Context) string {
 		ip = c.ClientIP()
 	} else if len(forwardedIP) == 0 && len(c.ClientIP()) == 0 {
 		ip = ""
+	} else {
+		if strings.EqualFold(forwardedIP, clientIP) {
+			ip = strings.Clone(clientIP)
+		} else {
+			ip = strings.Clone(forwardedIP)
+		}
 	}
 	return ip
 }

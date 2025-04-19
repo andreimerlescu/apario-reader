@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -37,7 +36,7 @@ func database_load() error {
 	if f_b_path_is_symlink(directory) {
 		resolvedPath, symlink_err := resolve_symlink(directory)
 		if symlink_err != nil {
-			return symlink_err
+			return log_boot.TraceReturn(symlink_err)
 		}
 		directory = resolvedPath
 		log_boot.Printf("database_load => assigned directory = %v", directory)
@@ -73,10 +72,10 @@ func database_load() error {
 				path = new_path
 			}
 
+			// todo  path is missing checksum of document id
 			document_record_filename := filepath.Join(path, "record.json")
 			document_record_info, info_err := os.Stat(document_record_filename)
 			if info_err != nil {
-				log_boot.Tracef("failed to find record.json inside the path %v therefore we are skipping", path)
 				return nil
 			}
 
@@ -116,14 +115,12 @@ func database_load() error {
 func resolve_symlink(path string) (string, error) {
 	info, err := os.Lstat(path)
 	if err != nil {
-		log.Printf("error obtaining file information for %v: %v", path, err)
-		return "", err
+		return "", log_error.TraceReturnf("error obtaining file information for %v: %v", path, err)
 	}
 	if info.Mode()&os.ModeSymlink != 0 {
 		resolvedPath, err := filepath.EvalSymlinks(path)
 		if err != nil {
-			log.Printf("error resolving symlink %v: %v", path, err)
-			return "", err
+			return "", log_error.TraceReturnf("error resolving symlink %v: %v", path, err)
 		}
 		return resolvedPath, nil
 	}
@@ -187,10 +184,7 @@ func analyze_document_directory(path string) {
 		return
 	}
 
-	var total_pages uint
-	if record.TotalPages > 0 {
-		total_pages = uint(record.TotalPages)
-	}
+	var total_pages = uint(record.TotalPages)
 
 	if record.Metadata == nil {
 		record.Metadata = make(map[string]string)
@@ -294,7 +288,7 @@ func analyze_document_directory(path string) {
 		requestedAt := time.Now().UTC()
 		sem_analyze_pages.Acquire()
 		if since := time.Since(requestedAt).Seconds(); since >= 1.0 {
-			log.Printf("took %.0f seconds to acquire sem_analyze_pages queue position", since)
+			log_boot.Printf("took %.0f seconds to acquire sem_analyze_pages queue position", since)
 		}
 		wg_active_tasks.Add(1)
 		go analyze_page(record.Identifier, path, i)
@@ -315,21 +309,21 @@ func analyze_page(record_identifier string, path string, i uint) {
 	ocr_path := filepath.Join(path, "pages", fmt.Sprintf("ocr.%06d.txt", i))
 	ocr_bytes, ocr_err := os.ReadFile(ocr_path)
 	if ocr_err != nil {
-		log.Printf("failed to read the ocr_path %v due to error %v", ocr_path, ocr_err)
+		log_boot.Tracef("failed to read the ocr_path %v due to error %v", ocr_path, ocr_err)
 		return
 	}
 
 	page_data_path := filepath.Join(path, "pages", fmt.Sprintf("page.%06d.json", i))
 	page_data_bytes, page_data_err := os.ReadFile(page_data_path)
 	if page_data_err != nil {
-		log.Printf("failed to read the pages JSON data due to error %v", page_data_err)
+		log_boot.Tracef("failed to read the pages JSON data due to error %v", page_data_err)
 		return
 	}
 
 	var page_data PendingPage
 	page_err := json.Unmarshal(page_data_bytes, &page_data)
 	if page_err != nil {
-		log.Printf("failed to unmarshal the page JSON due to error %v", page_err)
+		log_boot.Tracef("failed to unmarshal the page JSON due to error %v", page_err)
 	}
 
 	ocr_to_textee_idx(page_data.Identifier, page_data.RecordIdentifier, uint(page_data.PageNumber), string(ocr_bytes))
@@ -376,7 +370,7 @@ func analyze_page(record_identifier string, path string, i uint) {
 	if !page_index_defined {
 		m_index_page_identifier[page_index] = page_data.Identifier
 	} else {
-		log.Printf("[skipping] found a duplicate m_index_page_identifier[page_index] %d = %v", page_index, existing_entry)
+		log_boot.Printf("[skipping] found a duplicate m_index_page_identifier[page_index] %d = %v", page_index, existing_entry)
 	}
 	mu_index_page_identifier.Unlock()
 
@@ -438,9 +432,6 @@ func dump_database_to_disk() {
 	go write_payload_to_file("m_gematria_english.json", &wg, &mu_gematria_english, &m_gematria_english)
 	go write_payload_to_file("m_gematria_jewish.json", &wg, &mu_gematria_jewish, &m_gematria_jewish)
 	go write_payload_to_file("m_gematria_simple.json", &wg, &mu_gematria_simple, &m_gematria_simple)
-	//go write_payload_to_file("m_location_cities.json", &wg, &mu_location_cities, &m_location_cities)
-	//go write_payload_to_file("m_location_countries.json", &wg, &mu_location_countries, &m_location_countries)
-	//go write_payload_to_file("m_location_states.json", &wg, &mu_location_states, &m_location_states)
 	wg.Wait()
 	log_boot.Println("finished writing database to disk")
 
@@ -479,14 +470,11 @@ func restore_database_from_disk() {
 	go load_file_into_payload("m_gematria_english.json", &wg, &mu_gematria_english, &m_gematria_english)
 	go load_file_into_payload("m_gematria_jewish.json", &wg, &mu_gematria_jewish, &m_gematria_jewish)
 	go load_file_into_payload("m_gematria_simple.json", &wg, &mu_gematria_simple, &m_gematria_simple)
-	//go load_file_into_payload("m_location_cities.json", &wg, &mu_location_cities, &m_location_cities)
-	//go load_file_into_payload("m_location_countries.json", &wg, &mu_location_countries, &m_location_countries)
-	//go load_file_into_payload("m_location_states.json", &wg, &mu_location_states, &m_location_states)
 	wg.Wait()
 	a_b_locations_loaded.Store(true)
 	a_i_total_documents.Store(int64(len(m_document_total_pages)))
 	a_i_total_pages.Store(int64(len(m_page_identifier_page_number)))
-	log.Println("finished reading database into memory")
+	log_boot.Println("finished reading database into memory")
 	return
 }
 
@@ -582,10 +570,7 @@ func can_restore_database_from_disk() bool {
 		f_b_path_exists(filepath.Join(*flag_s_persistent_database_file, "m_words_english_gematria_simple.json")) &&
 		f_b_path_exists(filepath.Join(*flag_s_persistent_database_file, "m_gematria_english.json")) &&
 		f_b_path_exists(filepath.Join(*flag_s_persistent_database_file, "m_gematria_jewish.json")) &&
-		f_b_path_exists(filepath.Join(*flag_s_persistent_database_file, "m_gematria_simple.json")) //&&
-	//f_b_path_exists(filepath.Join(*flag_s_persistent_database_file, "m_location_cities.json")) &&
-	//f_b_path_exists(filepath.Join(*flag_s_persistent_database_file, "m_location_countries.json")) &&
-	//f_b_path_exists(filepath.Join(*flag_s_persistent_database_file, "m_location_states.json"))
+		f_b_path_exists(filepath.Join(*flag_s_persistent_database_file, "m_gematria_simple.json"))
 }
 
 func f_b_path_exists(path string) bool {
@@ -628,59 +613,26 @@ func load_file_into_payload(filename string, wg *sync.WaitGroup, mu *sync.RWMute
 	log_boot.Printf("completed loading file %v into the payload\n", filename)
 }
 
-func write_to_file(filename string, payload any) error {
-
-	file, err := os.Create(filename)
-	if err != nil {
-		fmt.Printf("Error opening file %v: %v", filename, err)
-		return err
-	}
-	defer file.Close()
-
-	bufferedWriter := bufio.NewWriter(file)
-	marshal, err := json.Marshal(payload)
-	if err != nil {
-		fmt.Println("Error writing to file:", err)
-		return err
-	}
-
-	_, err = bufferedWriter.Write(marshal)
-	if err != nil {
-		fmt.Println("Error writing to file:", err)
-		return err
-	}
-
-	if err := bufferedWriter.Flush(); err != nil {
-		fmt.Println("Error flushing writer:", err)
-		return err
-	}
-	return nil
-}
-
 func write_any_to_file(database string, filename string, payload any) error {
 	file, err := os.Create(filepath.Join(database, filename))
 	if err != nil {
-		fmt.Printf("Error opening file %v: %v", filename, err)
-		return err
+		return log_boot.TraceReturnf("Error opening file %v: %v", filename, err)
 	}
 	defer file.Close()
 
 	bufferedWriter := bufio.NewWriter(file)
 	marshal, err := json.Marshal(payload)
 	if err != nil {
-		fmt.Println("Error writing to file:", err)
-		return err
+		return log_boot.TraceReturnf("error writing to file: %+v", err)
 	}
 
 	_, err = bufferedWriter.Write(marshal)
 	if err != nil {
-		fmt.Println("Error writing to file:", err)
-		return err
+		return log_boot.TraceReturnf("error writing to file: %+v", err)
 	}
 
 	if err := bufferedWriter.Flush(); err != nil {
-		fmt.Println("Error flushing writer:", err)
-		return err
+		return log_boot.TraceReturnf("error flushing writer: %+v", err)
 	}
 	return nil
 }

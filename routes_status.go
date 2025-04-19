@@ -1,13 +1,13 @@
 package main
 
 import (
-	`fmt`
-	`html/template`
-	`log`
-	`net/http`
-	`strings`
+	"fmt"
+	"html/template"
+	"log"
+	"net/http"
+	"strings"
 
-	`github.com/gin-gonic/gin`
+	"github.com/gin-gonic/gin"
 )
 
 func r_get_status(c *gin.Context) {
@@ -17,7 +17,9 @@ func r_get_status(c *gin.Context) {
 		return
 	}
 
+	mu_gin_func_map.RLock()
 	tmpl := template.Must(template.New("status").Funcs(gin_func_map).Parse(string(data)))
+	mu_gin_func_map.RUnlock()
 
 	var htmlBuilder strings.Builder
 	if err := tmpl.Execute(&htmlBuilder, gin.H{

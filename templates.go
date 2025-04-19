@@ -1,40 +1,50 @@
 package main
 
 import (
-	`fmt`
-	`html/template`
-	`strings`
+	"fmt"
+	"html/template"
+	"strings"
 
-	`github.com/gin-gonic/gin`
+	"github.com/gin-gonic/gin"
 )
 
 // render_partial_template is a function defined for gin html templates that allows you to render a file from the
 // bundled/assets/templates/*.html where * is the first argument of the function call
-//   {{ render_partial "head" .dark_mode }}
+//
+//	{{ render_partial "head" .dark_mode }}
+//
 // the .dark_mode is a second required parameter for all templates, regardless if the template component actually
 // uses a dark mode switcher like
-//   {{ if eq .dark_mode "1" }}dark{{else}}light{{end}}
+//
+//	{{ if eq .dark_mode "1" }}dark{{else}}light{{end}}
+//
 // this special function will use the gin_func_vars type to store a list of special variables
 // that need to be accessible from within the partial template. When writing to the gin_func_vars method, it is
 // critical that you use the mu_gin_func_vars to .RLock(), .RUnlock(), .Lock() and .Unlock() the mutex before
 // reading and writing to the gin_func_vars map for threadsafety. These variables defined can then be used
 // within the template called sample you'd define myvar as
-//   {{ .myvar }}
+//
+//	{{ .myvar }}
+//
 // when defining .myvar you would do something like:
-//   mu_gin_func_vars.RLock()
-//   existing_vars, have_vars := gin_func_vars['sample']
-//   mu_gin_func_vars.RUnlock()
-//   if !have_vars || len(existing_vars) == 0 {
-//     mu_gin_func_vars.Lock()
-//     gin_func_map['sample'] = gin.H{
-//       "myvar":     "hello world",
-//     }
-//     mu_gin_func_vars.Unlock()
-//   }
+//
+//	mu_gin_func_vars.RLock()
+//	existing_vars, have_vars := gin_func_vars['sample']
+//	mu_gin_func_vars.RUnlock()
+//	if !have_vars || len(existing_vars) == 0 {
+//	  mu_gin_func_vars.Lock()
+//	  gin_func_map['sample'] = gin.H{
+//	    "myvar":     "hello world",
+//	  }
+//	  mu_gin_func_vars.Unlock()
+//	}
+//
 // the best place to define this would actually be inside the NewWebServer method since it has a sync.Once called
 // once_server_start that ensure that you're defining and modifying the gin_func_vars map on every page request.
 // For example, from within the NewWebServer method, where new routes are defined:
-//   r.GET("/new-route", getMyNewRoute)
+//
+//	r.GET("/new-route", getMyNewRoute)
+//
 // you would define the template variables used for /new-route below this line (or above it). Consider having one
 // section where these are set to prevent excessive lock/unlock on the mutex.
 func render_partial_template(path string, dark_mode string) template.HTML {
@@ -52,7 +62,9 @@ func compile_partial_template(path string, dark_mode string) (template.HTML, err
 		return "", fmt.Errorf("failed to load %v due to err %v", filename, bundle_err)
 	}
 
+	mu_gin_func_map.RLock()
 	tmpl := template.Must(template.New(path).Funcs(gin_func_map).Parse(string(data)))
+	mu_gin_func_map.RUnlock()
 
 	mu_gin_func_vars.RLock()
 	existing_vars, have_vars := gin_func_vars[path]
@@ -65,16 +77,10 @@ func compile_partial_template(path string, dark_mode string) (template.HTML, err
 			"is_dark_mode": dark_mode,
 		}
 	}
-
 	existing_vars["is_dark_mode"] = dark_mode // override with argument value
-
 	existing_vars["loading_svg_img_src"] = template.HTML(svg_page_loading_img_src)
-
 	var htmlBuilder strings.Builder
-
-	mu_gin_func_vars.RLock()
 	template_err := tmpl.Execute(&htmlBuilder, existing_vars)
-	mu_gin_func_vars.RUnlock()
 
 	if template_err != nil {
 		return "", fmt.Errorf("error executing template: %v", template_err)

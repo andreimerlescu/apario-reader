@@ -225,6 +225,7 @@ var (
 
 	// gin templates
 	gin_func_map          template.FuncMap
+	mu_gin_func_map       = sync.RWMutex{}
 	default_gin_func_vars gin.H
 	// If a new template is needed, and you're going to use it in a new route entry point, make sure that
 	// you define your variables either here at compile time OR within your function. If you choose to
@@ -302,17 +303,47 @@ type Page struct {
 	PageNumber         uint   `json:"page_number"`
 }
 
+type PDFCPUInfoResponseInfo struct {
+	Source             string         `json:"source,omitempty"`
+	Version            string         `json:"version,omitempty"`
+	Pages              int            `json:"pages,omitempty"`
+	Title              string         `json:"title,omitempty"`
+	Author             string         `json:"author,omitempty"`
+	Subject            string         `json:"subject,omitempty"`
+	CreationDate       string         `json:"creationDate,omitempty"`
+	ModificationDate   string         `json:"modificationDate,omitempty"`
+	Keywords           []string       `json:"keywords,omitempty"`
+	Properties         map[string]any `json:"properties,omitempty"`
+	Tagged             bool           `json:"tagged,omitempty"`
+	Hybrid             bool           `json:"hybrid,omitempty"`
+	Linearized         bool           `json:"linearized,omitempty"`
+	UsingXRefStreams   bool           `json:"usingXRefStreams,omitempty"`
+	UsingObjectStreams bool           `json:"usingObjectStreams,omitempty"`
+	Watermarked        bool           `json:"watermarked,omitempty"`
+	Thumbnails         bool           `json:"thumbnails,omitempty"`
+	Form               bool           `json:"form,omitempty"`
+	Signatures         bool           `json:"signatures,omitempty"`
+	AppendOnly         bool           `json:"appendOnly,omitempty"`
+	Bookmarks          bool           `json:"bookmarks,omitempty"`
+	Names              bool           `json:"names,omitempty"`
+	Encrypted          bool           `json:"encrypted,omitempty"`
+	Permissions        int            `json:"permissions,omitempty"`
+	PageCount          int            `json:"pageCount,omitempty"`
+}
+
 type ResultData struct {
-	Identifier        string            `json:"identifier"`
-	URL               string            `json:"url"`
-	DataDir           string            `json:"data_dir"`
-	PDFPath           string            `json:"pdf_path"`
-	PDFChecksum       string            `json:"pdf_checksum"`
-	OCRTextPath       string            `json:"ocr_text_path"`
-	ExtractedTextPath string            `json:"extracted_text_path"`
-	RecordPath        string            `json:"record_path"`
-	TotalPages        int64             `json:"total_pages"`
-	Metadata          map[string]string `json:"metadata"`
+	Identifier        string                 `json:"identifier"`
+	URL               string                 `json:"url"`
+	DataDir           string                 `json:"data_dir"`
+	PDFPath           string                 `json:"pdf_path"`
+	URLChecksum       string                 `json:"url_checksum"`
+	PDFChecksum       string                 `json:"pdf_checksum"`
+	OCRTextPath       string                 `json:"ocr_text_path"`
+	ExtractedTextPath string                 `json:"extracted_text_path"`
+	RecordPath        string                 `json:"record_path"`
+	TotalPages        int64                  `json:"total_pages"`
+	Info              PDFCPUInfoResponseInfo `json:"info"`
+	Metadata          map[string]string      `json:"metadata"`
 }
 
 type PendingPage struct {
