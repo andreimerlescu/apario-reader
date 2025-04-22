@@ -1,15 +1,16 @@
 package main
 
 import (
-	`fmt`
-	`path/filepath`
+	"fmt"
+	"path/filepath"
 
-	`github.com/andreimerlescu/configurable`
+	"github.com/andreimerlescu/configurable"
 )
 
 var (
 	config = configurable.New()
 	// Command Line Flags
+	flag_s_blackhole_file_path                     = config.NewString("blackhole-db-path", filepath.Join(".", "databases", "blackhole.db"), "Path to blackhole.db")
 	flag_s_product_name                            = config.NewString("product-name", "apario-reader", "name of the product that is running, used as the prefix to the log file and throughout the runtime of the app; this is its self label")
 	flag_s_environment                             = config.NewString("environment", "development", "environment label")
 	flag_s_production_environment_label            = config.NewString("production-environment-label", "production", "default is production but useful when --environment value must be treated like production without using the label production. if you dont know how to use this flag, dont use it.")

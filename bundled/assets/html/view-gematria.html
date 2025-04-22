@@ -6,12 +6,10 @@
 </head>
 <body>
 <main>
-    <div class="px-1 py-1 my-1">
-        <div class="text-center">
-            {{ render_partial "header_full" .dark_mode }}
-        </div>
+    {{ render_partial "header_full_small" .dark_mode }}
+    <div class="container">
         {{ $outer := . }}
-        <div class="container px-2 py-2 my-2">
+        <div class="row">
             {{ if or (eq .type "english") (eq .type "English") }}
                 <h1 class="lead mb-4">
                     <span class="badge badge-primary m-2 p-1">{{ .s_score }}</span>

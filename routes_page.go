@@ -104,8 +104,7 @@ func r_get_page(c *gin.Context) {
 		return
 	}
 
-	ocr_path := filepath.Join(directory, document_directory_name, "pages", fmt.Sprintf("ocr.%06d.txt", page_number))
-	ocr_path = strings.ReplaceAll(ocr_path, filepath.Join(*flag_s_database, *flag_s_database), *flag_s_database)
+	ocr_path := filepath.Join(document_directory_name, "pages", fmt.Sprintf("ocr.%06d.txt", page_number))
 	ocr_bytes, ocr_err := os.ReadFile(ocr_path)
 	if ocr_err != nil {
 		log.Printf("failed to read the ocr_path %v due to error %v", ocr_path, ocr_err)
@@ -113,7 +112,7 @@ func r_get_page(c *gin.Context) {
 		return
 	}
 
-	record_bytes, record_err := os.ReadFile(filepath.Join(directory, document_directory_name, "record.json"))
+	record_bytes, record_err := os.ReadFile(filepath.Join(document_directory_name, "record.json"))
 	if record_err != nil {
 		log.Printf("failed to read the record_path %v due to error %v", ocr_path, record_err)
 		c.String(http.StatusInternalServerError, "error executing template", ocr_err)
@@ -134,8 +133,9 @@ func r_get_page(c *gin.Context) {
 		return
 	}
 
-	page_pdf_path := filepath.Join(directory, document_directory_name, "pages", fmt.Sprintf("%v_page_%d.pdf", template_vars["meta_record_number"], page_number))
-	page_pdf_path = strings.ReplaceAll(page_pdf_path, filepath.Join(*flag_s_database, *flag_s_database), *flag_s_database)
+	basename := filepath.Base(document_pdf_path)
+	basename = strings.ReplaceAll(basename, ".pdf", "")
+	page_pdf_path := filepath.Join(document_directory_name, "pages", fmt.Sprintf("%v_page_%d.pdf", basename, page_number))
 	page_pdf_info, page_pdf_info_err := os.Stat(page_pdf_path)
 	if errors.Is(page_pdf_info_err, os.ErrNotExist) || errors.Is(page_pdf_info_err, os.ErrPermission) || page_pdf_info_err != nil {
 		log.Printf("failed to get the info about the page %v pdf path %v due to err %v", page_identifier, page_pdf_path, page_pdf_info_err)
@@ -147,8 +147,7 @@ func r_get_page(c *gin.Context) {
 		template_vars["page_pdf_bytes"] = page_pdf_info.Size()
 	}
 
-	page_data_path := filepath.Join(directory, document_directory_name, "pages", fmt.Sprintf("page.%06d.json", page_number))
-	page_data_path = strings.ReplaceAll(page_data_path, filepath.Join(*flag_s_database, *flag_s_database), *flag_s_database)
+	page_data_path := filepath.Join(document_directory_name, "pages", fmt.Sprintf("page.%06d.json", page_number))
 	page_data_bytes, page_data_err := os.ReadFile(page_data_path)
 	if page_data_err != nil {
 		log.Printf("failed to read the pages JSON data due to error %v", page_data_err)

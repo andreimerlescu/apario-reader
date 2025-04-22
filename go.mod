@@ -2,7 +2,7 @@ module apario-reader
 
 go 1.23.0
 
-toolchain go1.24.1
+toolchain go1.23.2
 
 require (
 	github.com/andreimerlescu/configurable v0.0.8

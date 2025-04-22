@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"html/template"
+	"maps"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -66,21 +67,24 @@ func compile_partial_template(path string, dark_mode string) (template.HTML, err
 	tmpl := template.Must(template.New(path).Funcs(gin_func_map).Parse(string(data)))
 	mu_gin_func_map.RUnlock()
 
+	var existing_vars = make(gin.H)
 	mu_gin_func_vars.RLock()
-	existing_vars, have_vars := gin_func_vars[path]
+	ev, have_vars := gin_func_vars[path]
 	mu_gin_func_vars.RUnlock()
-	if !have_vars || len(existing_vars) == 0 {
+	if !have_vars || len(ev) == 0 {
 		existing_vars = gin.H{
 			"title":        *flag_s_site_title,
 			"company":      *flag_s_site_company,
 			"domain":       *flag_s_primary_domain,
 			"is_dark_mode": dark_mode,
 		}
+	} else {
+		existing_vars = maps.Clone(ev)
 	}
 	existing_vars["is_dark_mode"] = dark_mode // override with argument value
 	existing_vars["loading_svg_img_src"] = template.HTML(svg_page_loading_img_src)
 	var htmlBuilder strings.Builder
-	template_err := tmpl.Execute(&htmlBuilder, existing_vars)
+	template_err := tmpl.Execute(&htmlBuilder, maps.Clone(existing_vars))
 
 	if template_err != nil {
 		return "", fmt.Errorf("error executing template: %v", template_err)

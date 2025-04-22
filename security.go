@@ -45,22 +45,22 @@ func f_add_ip_to_ban_list(ip net.IP) {
 	go f_patch_server_with_banned_ip(ip)
 }
 
+// f_add_ip_to_watch_list adds ip to m_ip_watch_list with mu_ip_watch_list
 func f_add_ip_to_watch_list(ip net.IP) {
 	defer func() {
 		if r := recover(); r != nil {
 			log.Println("Recovered from panic:", r)
 		}
 	}()
-	mu_ip_watch_list.RLock()
+
+	mu_ip_watch_list.Lock()
 	counter, found := m_ip_watch_list[ip.String()]
-	mu_ip_watch_list.RUnlock()
 	if !found {
-		mu_ip_watch_list.Lock()
 		m_ip_watch_list[ip.String()] = &atomic.Int64{}
 		counter = m_ip_watch_list[ip.String()]
-		mu_ip_watch_list.Unlock()
 	}
 	new_count := counter.Add(1)
+	mu_ip_watch_list.Unlock()
 
 	if new_count >= 6 {
 		f_add_ip_to_ban_list(ip)
@@ -110,8 +110,8 @@ func f_s_filtered_ip(c *gin.Context) string {
 
 func f_schedule_ip_ban_list_cleanup(ctx context.Context) {
 	ticker1 := time.NewTicker(time.Duration(*flag_i_ip_ban_list_synchronization) * time.Second)
-	ticker2 := time.NewTicker(6 * time.Minute) // every 3 minutes save to disk
-	ticker3 := time.NewTicker(7 * time.Minute) // every 6 minutes restore from disk
+	ticker2 := time.NewTicker(3 * time.Minute) // every 3 minutes save to disk
+	ticker3 := time.NewTicker(6 * time.Minute) // every 6 minutes restore from disk
 	for {
 		select {
 		case <-ctx.Done():
@@ -234,15 +234,13 @@ func f_perform_ip_ban_list_cleanup(ctx context.Context) {
 	}
 
 	for _, ip := range ips {
-		mu_ip_watch_list.RLock()
+		mu_ip_watch_list.Lock()
 		counter, found := m_ip_watch_list[ip.String()]
-		mu_ip_watch_list.RUnlock()
 		if !found {
-			mu_ip_watch_list.Lock()
 			m_ip_watch_list[ip.String()] = &atomic.Int64{}
 			counter = m_ip_watch_list[ip.String()]
-			mu_ip_watch_list.Unlock()
 		}
+		mu_ip_watch_list.Unlock()
 		results.mu.Lock()
 		results.Entries[ip.String()] = ts_ip_save_entry{
 			IP:      ip,

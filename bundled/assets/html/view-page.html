@@ -3,21 +3,35 @@
 <head>
     <title>{{ .title }}</title>
     {{ render_partial "head" .dark_mode }}
+    <script src="/assets/js/imagezoomer.js" type="text/javascript"></script>
+    <script src="/assets/js/editorjs.2.28.2.js"></script>
+    <script src="/assets/js/editorjs.header.2.8.1.js"></script>
+    <script src="/assets/js/editorjs.marker.1.4.0.js"></script>
+    <script src="/assets/js/editorjs.nested-list.1.4.2.js"></script>
+    <script src="/assets/js/view-page.js" type="text/javascript"></script>
 </head>
 <body>
 <main>
-    <div class="px-1 py-1 my-1">
-        <div class="text-center">
-            {{ render_partial "header_full_small" .dark_mode }}
-        </div>
+    {{ render_partial "header_full_small" .dark_mode }}
+    <div class="container">
         {{ $outer := . }}
         <div class="row">
-            <div class="col-lg-6 col-sm-12 col-md-8 text-right">
-                <img src="/pending-viewport-placeholder.svg" data-src="{{.cover_large}}" class="lazyload img-fluid shadow-sm" alt="Page {{.page_number}} of {{.meta_record_number }}"/>
+            <div class="col-lg-6 col-sm-10 col-md-8 text-right">
+                <img src="/pending-viewport-placeholder.svg"
+                     data-src="{{.cover_large}}"
+                     data-zoom-image="{{.cover_original}}"
+                     data-toggle="lenszoom"
+                     data-document-identifier="{{.document_identifier}}"
+                     data-page-identifier="{{.page_identifier}}"
+                     data-document-pages="{{.document_pages}}"
+                     id="page-contents"
+                     data-page-number="{{.page_number}}"
+                     class="lazyload img-fluid shadow-sm"
+                     alt="Page {{.page_number}} of {{.meta_record_number }}"/>
             </div>
-            <div class="col-lg-6 col-sm-12 col-md-4">
-                <div class="p-2 text-center">
-                    <div class="btn-group mb-1" role="group" aria-label="Pagination">
+            <div class="col-lg-6 col-sm-10 col-md-4">
+                <div class="p-1 text-center">
+                    <div class="btn-group-sm mb-1" role="group" aria-label="Pagination">
                         <a href="/page/{{ get_pg_id_from_doc_id_def_id_and_cur_pg_num .document_identifier .page_identifier 1 }}" class="btn btn-outline-primary {{ if eq .i_page 1 }}disabled{{ end }}">First</a>
                         <a href="/page/{{ get_pg_id_from_doc_id_def_id_and_cur_pg_num .document_identifier .page_identifier ( minus .i_page 1 ) }}" class="btn btn-outline-primary {{ if eq .i_page 1 }}disabled{{ end }}">Previous</a>
 
@@ -37,13 +51,6 @@
                         <a href="/page/{{ get_pg_id_from_doc_id_def_id_and_cur_pg_num .document_identifier .page_identifier .i_total_pages }}" class="btn btn-outline-primary {{ if eq .i_page .i_total_pages }}disabled{{ end }}">Last</a>
                     </div>
                 </div>
-                <script src="/assets/js/mousetrap.1.6.5.min.js" type="text/javascript"></script>
-                <script type="text/javascript">
-                    Mousetrap.bind('right', function(){ window.location = "/page/{{ get_pg_id_from_doc_id_def_id_and_cur_pg_num .document_identifier .page_identifier ( plus .i_page 1 ) }}"}, 'keyup');
-                    Mousetrap.bind('left', function (){ window.location = "/page/{{ get_pg_id_from_doc_id_def_id_and_cur_pg_num .document_identifier .page_identifier ( minus .i_page 1 ) }}"}, 'keyup')
-                    Mousetrap.bind("f p enter", function() { window.location = "/page/{{ get_pg_id_from_doc_id_def_id_and_cur_pg_num .document_identifier .page_identifier 1 }}"}, "keyup")
-                    Mousetrap.bind("l p enter", function (){ window.location = "/page/{{ get_pg_id_from_doc_id_def_id_and_cur_pg_num .document_identifier .page_identifier .i_total_pages }}"}, "keyup")
-                </script>
                 <div class="text-center">
                     <small class="mb-3">
                         <attr title="right arrow key">&nbsp;right&nbsp;</attr> and <attr title="left arrow key">&nbsp;left&nbsp;</attr> arrow keys will go to next and previous pages. <br>
@@ -51,9 +58,6 @@
                         <attr title="l as in Last">&nbsp;l&nbsp;</attr> <attr title="p as in Page">&nbsp;p&nbsp;</attr> <attr title="enter or return key">&nbsp;enter&nbsp;</attr> takes you to page {{ .i_total_pages }}.
                     </small>
                 </div>
-
-
-                <!-- Nav tabs -->
                 <ul class="nav nav-tabs" id="myTab" role="tablist">
                     <li class="nav-item" role="presentation">
                         <button class="nav-link active" id="metadata-tab" data-bs-toggle="tab" data-bs-target="#metadata" type="button" role="tab" aria-controls="metadata" aria-selected="true">Metadata</button>
@@ -65,10 +69,7 @@
                         <button class="nav-link" id="gematria-tab" data-bs-toggle="tab" data-bs-target="#gematria" type="button" role="tab" aria-controls="gematria" aria-selected="false">Gematria</button>
                     </li>
                 </ul>
-
-                <!-- Tab panes -->
                 <div class="tab-content">
-                    <!-- first tab -->
                     <div class="tab-pane active" id="metadata" role="tabpanel" aria-labelledby="metadata-tab" tabindex="0">
                         <table class="table">
                             <thead>
@@ -106,16 +107,11 @@
                             </tbody>
                         </table>
                     </div>
-                    <!-- second tab -->
                     <div class="tab-pane" id="ftn" role="tabpanel" aria-labelledby="ftn-tab" tabindex="0">
                         <div id="editorjs"></div>
                         <button id="save-button">Save</button>
                         <pre id="output"></pre>
 
-                        <script src="/assets/js/editorjs.2.28.2.js"></script>
-                        <script src="/assets/js/editorjs.header.2.8.1.js"></script>
-                        <script src="/assets/js/editorjs.marker.1.4.0.js"></script>
-                        <script src="/assets/js/editorjs.nested-list.1.4.2.js"></script>
                         <script>
                             const editor = new EditorJS({
                                 holderId: "editorjs",
@@ -157,7 +153,6 @@
                             })
                         </script>
                     </div>
-                    <!-- third panel -->
                     <div class="tab-pane" id="gematria" role="tabpanel" aria-labelledby="gematria-tab" tabindex="0">
                         <table class="table">
                             <tr>
@@ -177,19 +172,7 @@
                         </table>
                     </div>
                 </div>
-
-                <script type="text/javascript">
-                const triggerTabList = document.querySelectorAll('#myTab button')
-                triggerTabList.forEach(triggerEl => {
-                  const tabTrigger = new bootstrap.Tab(triggerEl)
-                  triggerEl.addEventListener('click', event => {
-                        event.preventDefault()
-                        tabTrigger.show()
-                    })
-                })
-                </script>
-
-            </div>
+           </div>
         </div>
         {{ render_partial "footer" .dark_mode }}
     </div>

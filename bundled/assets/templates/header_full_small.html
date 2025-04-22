@@ -1,19 +1,30 @@
-<a href="/?from=logo" title="{{ .title }}" id="header-logo-link">
-    <img class="d-block mx-auto mb-1"
-         id="header-logo-img" height="170px"
-         src='/assets/images/phoenixvault_logo-{{ if eq .is_dark_mode "1" }}dark{{else}}light{{end}}.png'
-         alt="{{ .company }}"
-         data-dark-mode="{{ .is_dark_mode }}"/>
-</a>
-{{ render_partial "nav_bar" .is_dark_mode }}
-<div class="row mb-2">
-    <form action="/search" method="get">
-        <div class="input-group">
-            <span class="input-group-text" id="query-label">Full Text Search:</span>
-            <input type="text" class="form-control" placeholder="Search Query" name="query" id="query" aria-label="Input Search Query" aria-describedby="query-label">
-            <button class="btn btn-primary" type="submit" id="search-button">Search</button>
-            <label for="is-bot" id="is-bot-label" class="d-none">Captcha:</label><input type="checkbox" checked name="is-bot" id="is-bot" class="d-none">
-            <a href="/StumbleInto" title="StumbleInto" id="stumble-into-button" class="btn btn-success btn-lg input-group-text">StumbleInto</a>
+<div class="container mb-2">
+    <div class="row">
+        <div class="col-4 align-content-end">
+            <a href="/?from=logo" title="{{ .title }}" id="header-logo-link">
+                <img class="d-block mx-auto mb-1"
+                     id="header-logo-img" height="120px"
+                     src='/assets/images/phoenixvault_logo-{{ if eq .is_dark_mode "1" }}dark{{else}}light{{end}}.png'
+                     alt="{{ .company }}"
+                     data-dark-mode="{{ .is_dark_mode }}"/>
+            </a>
         </div>
-    </form>
+        <div class="col-8 align-content-start">
+            <div class="row py-2">
+                {{ render_partial "nav_bar" .is_dark_mode }}
+            </div>
+            <div class="row py-2">
+                <form action="/search" method="get">
+                    <div class="input-group">
+                        <span class="input-group-text" id="query-label">Full Text Search:</span>
+                        <input type="text" class="form-control" placeholder="Search Query" name="query" id="query" aria-label="Input Search Query" aria-describedby="query-label">
+                        <button class="btn btn-primary" type="submit" id="search-button">Search</button>
+                        <label for="is-bot" id="is-bot-label" class="d-none">Captcha:</label><input type="checkbox" checked name="is-bot" id="is-bot" class="d-none">
+                        <a href="/StumbleInto" title="StumbleInto" id="stumble-into-button" class="btn btn-success btn-lg input-group-text">StumbleInto</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 </div>
+

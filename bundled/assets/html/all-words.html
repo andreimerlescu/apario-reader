@@ -6,10 +6,8 @@
 </head>
 <body>
 <main>
+    {{ render_partial "header_full_small" .dark_mode }}
     <div class="px-1 py-1 my-1">
-        <div class="text-center">
-            {{ render_partial "header_full_small" .dark_mode }}
-        </div>
         <div class="col-lg-6 mx-auto">
             <p class="lead mb-4">All Words</p>
         </div>

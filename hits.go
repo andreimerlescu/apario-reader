@@ -1,14 +1,15 @@
 package main
 
 import (
-	`context`
-	`encoding/json`
-	`log`
-	`os`
-	`sync/atomic`
-	`time`
+	"context"
+	"encoding/json"
+	"fmt"
+	"log"
+	"os"
+	"sync/atomic"
+	"time"
 
-	`github.com/gin-gonic/gin`
+	"github.com/gin-gonic/gin"
 )
 
 type Hit struct {
@@ -39,6 +40,7 @@ func Hits() *Hit {
 		hit_jar = &Hit{
 			Total: 0,
 		}
+		_ = hit_jar.Reload()
 	}
 	return hit_jar
 }
@@ -54,39 +56,55 @@ func f_i_hits() int64 {
 	return Hits().Load()
 }
 
+func (h *Hit) Persist() error {
+	hitFile, openErr := os.OpenFile(*flag_s_hits_file, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0600)
+	if openErr != nil {
+		return fmt.Errorf("error opening IP ban file for writing: %v", openErr)
+	}
+	defer hitFile.Close()
+
+	encoder := json.NewEncoder(hitFile)
+	if err := encoder.Encode(Hits()); err != nil {
+		return fmt.Errorf("error encoding Hits: %v", err)
+	}
+	return nil
+}
+
+func (h *Hit) Reload() error {
+	hitFile, openErr := os.OpenFile(*flag_s_hits_file, os.O_RDONLY, 0600)
+	if openErr != nil {
+		return fmt.Errorf("error opening Hits: %v", openErr)
+	}
+	defer hitFile.Close()
+
+	var results Hit
+	decoder := json.NewDecoder(hitFile)
+	if err := decoder.Decode(&results); err != nil {
+		return fmt.Errorf("error decoding Hits: %v", err)
+	}
+	Hits().Store(results.Total)
+	return nil
+}
+
 func persist_hits_offline(ctx context.Context) {
+	tickerPersist := time.NewTicker(369 * time.Second)
+	tickerReload := time.NewTicker(434 * time.Second)
+	defer tickerPersist.Stop()
+	defer tickerReload.Stop()
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case <-time.After(time.Second * 30): // Save the hits to disk every 30 seconds
-			hitFile, openErr := os.OpenFile(*flag_s_hits_file, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0600)
-			if openErr != nil {
-				log.Printf("Error opening IP ban file for writing: %v", openErr)
-				return
+		case <-tickerPersist.C: // Save the hits to disk every 369 seconds
+			err := Hits().Persist()
+			if err != nil {
+				log.Printf("Error persisting hits: %v", err)
 			}
-			defer hitFile.Close()
-
-			encoder := json.NewEncoder(hitFile)
-			if err := encoder.Encode(Hits()); err != nil {
-				log.Printf("Error encoding Hits: %v", err)
+		case <-tickerReload.C: // reload hits from disk every 3 minutes
+			err := Hits().Reload()
+			if err != nil {
+				log.Printf("Error reloading hits: %v", err)
 			}
-
-		case <-time.After(time.Minute * 3): // reload hits from disk every 3 minutes
-			hitFile, openErr := os.OpenFile(*flag_s_hits_file, os.O_RDONLY, 0600)
-			if openErr != nil {
-				log.Printf("Error opening Hits: %v", openErr)
-				return
-			}
-			defer hitFile.Close()
-
-			var results Hit
-			decoder := json.NewDecoder(hitFile)
-			if err := decoder.Decode(&results); err != nil {
-				log.Printf("Error decoding Hits: %v", err)
-				return
-			}
-			Hits().Store(results.Total)
 		}
 	}
 }
